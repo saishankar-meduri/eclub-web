@@ -1,10 +1,15 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import StatusBadge from '../../../components/StatusBadge';
-import { getEventBySlug } from '../../../lib/data';
+import { getEvents, getEventBySlug } from '../../../lib/data';
 import { formatDate, formatTime, formatFee, formatTeam, lines } from '../../../lib/format';
 
 export const revalidate = 60;
+
+export async function generateStaticParams() {
+  const events = await getEvents();
+  return events.map((e) => ({ slug: e.slug }));
+}
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
