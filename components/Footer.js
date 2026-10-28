@@ -9,6 +9,7 @@ export default function Footer() {
           <p className="muted">{SITE.campus}</p>
         </div>
         <div className="footer-links">
+          <a href="/status">Application status</a>
           <a href={SITE.instagram} target="_blank" rel="noopener noreferrer">Instagram</a>
           <a href={SITE.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a>
         </div>

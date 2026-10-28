@@ -1,6 +1,25 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function userPath() {
+      return /databases/$(database)/documents/users/$(request.auth.token.email.lower());
+    }
+    function hasUser() { return signedIn() && exists(userPath()); }
+    function me() { return get(userPath()).data; }
+    function isSuper() { return hasUser() && me().role == 'superadmin'; }
+    function isHeadOf(domainId) {
+      return hasUser() && me().role == 'domainHead' && me().domainId == domainId;
+    }
+    function domainOpen(domainId) {
+      return get(/databases/$(database)/documents/domains/$(domainId)).data.open == true;
+    }
+
+    // ---------- V1 public content ----------
     match /events/{id} {
       allow read: if resource.data.published == true;
       allow write: if false;
@@ -8,6 +27,75 @@ service cloud.firestore {
     match /announcements/{id} {
       allow read: if resource.data.published == true;
       allow write: if false;
+    }
+
+    // ---------- users (roles) ----------
+    match /users/{email} {
+      allow read: if isSuper() || (signedIn() && request.auth.token.email.lower() == email);
+      allow write: if isSuper();
+    }
+
+    // ---------- domains ----------
+    match /domains/{domainId} {
+      allow read: if resource.data.open == true || isSuper() || isHeadOf(domainId);
+      allow create, delete: if isSuper();
+      allow update: if isSuper()
+        || (isHeadOf(domainId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['open', 'description']));
+
+      // WhatsApp link lives here so it is NOT publicly readable
+      match /private/{docId} {
+        allow read, write: if isSuper() || isHeadOf(domainId);
+      }
+
+      match /questions/{qid} {
+        allow read: if domainOpen(domainId) || isSuper() || isHeadOf(domainId);
+        allow create, update: if (isSuper() || isHeadOf(domainId)) && validQuestion();
+        allow delete: if isSuper() || isHeadOf(domainId);
+      }
+    }
+
+    function validQuestion() {
+      let q = request.resource.data;
+      return q.keys().hasOnly(['label', 'type', 'options', 'required', 'order'])
+        && q.keys().hasAll(['label', 'type', 'options', 'required', 'order'])
+        && q.label is string && q.label.size() > 0 && q.label.size() <= 300
+        && q.type in ['short', 'long', 'mcq', 'link']
+        && q.options is list && q.options.size() <= 20
+        && q.required is bool
+        && q.order is int;
+    }
+
+    // ---------- applications ----------
+    // Doc ID must be "<SRN>_<domainId>" -> duplicates are impossible (second create hits an
+    // existing doc = update = denied for the public).
+    match /applications/{appId} {
+      allow create: if validApplication(appId);
+      allow read: if isSuper() || (hasUser() && me().role == 'domainHead' && resource.data.domainId == me().domainId);
+      allow update: if (isSuper() || isHeadOf(resource.data.domainId))
+        && request.resource.data.domainId == resource.data.domainId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'shortlistedAt'])
+        && request.resource.data.status in ['applied', 'shortlisted', 'rejected'];
+      allow delete: if isSuper();
+    }
+
+    function validApplication(appId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['name','srn','email','phone','year','branch','domainId','answers','status','createdAt','shortlistedAt'])
+        && d.keys().hasAll(['name','srn','email','phone','year','branch','domainId','answers','status','createdAt'])
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 100
+        && d.srn is string && d.srn.matches('^[A-Z0-9]{8,16}$')
+        && d.email is string && d.email.size() <= 254
+        && d.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$') && d.email == d.email.lower()
+        && d.phone is string && d.phone.matches('^[0-9]{10}$')
+        && d.year in ['1','2','3','4']
+        && d.branch is string && d.branch.size() > 0 && d.branch.size() <= 50
+        && d.domainId is string && appId == d.srn + '_' + d.domainId
+        && domainOpen(d.domainId)
+        && d.answers is map && d.answers.size() <= 30
+        && d.status == 'applied'
+        && d.createdAt == request.time
+        && (!('shortlistedAt' in d) || d.shortlistedAt == null);
     }
   }
 }

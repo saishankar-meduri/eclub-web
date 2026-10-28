@@ -1,17 +1,20 @@
 {
   "name": "eclub-site",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "seed": "node --env-file=.env.local scripts/seed.mjs"
+    "seed": "node --env-file=.env.local scripts/seed.mjs",
+    "seed:admin": "node --env-file=.env.local scripts/seed-superadmin.mjs"
   },
   "dependencies": {
     "firebase": "^13.1.0",
     "next": "^15.5.28",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "firebase-admin": "^13.0.0",
+    "server-only": "^0.0.1"
   }
 }

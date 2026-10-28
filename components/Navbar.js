@@ -10,6 +10,7 @@ const LINKS = [
   ['/events', 'Events'],
   ['/announcements', 'Announcements'],
   ['/about', 'About'],
+  ['/join', 'Join'],
 ];
 
 export default function Navbar() {
