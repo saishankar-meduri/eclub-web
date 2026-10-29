@@ -92,6 +92,7 @@ function Panel({ auth }) {
       <div className="rc-row">
         <h1>Superadmin</h1>
         <a className="rc-btn ghost" href="/admin/events">Manage events</a>
+        <a className="rc-btn ghost" href="/admin/announcements">Announcements</a>
         <button className="rc-btn ghost" onClick={auth.signOut}>Sign out</button>
       </div>
       {msg && <p className="rc-err">{msg}</p>}

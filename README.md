@@ -29,6 +29,9 @@ applications/{SRN}_{domainId}      { name, srn, email, phone, year, branch, doma
 NEXT_PUBLIC_FIREBASE_API_KEY / _AUTH_DOMAIN / _PROJECT_ID / _APP_ID
 FIREBASE_ADMIN_PROJECT_ID / _CLIENT_EMAIL / _PRIVATE_KEY (server only)
 SUPERADMIN_EMAIL (seed script only)
+CLOUDINARY_CLOUD_NAME / _API_KEY / _API_SECRET (server only)
+SMTP_HOST / _PORT / _SECURE / _USER / _PASS, MAIL_FROM, NEXT_PUBLIC_SITE_URL (shortlist emails)
+UPSTASH_REDIS_REST_URL / _TOKEN (optional, shared rate limiting)
 
 ## Test checklist
 - [ ] Seed script creates users/<your email> as superadmin; /admin/superadmin loads
@@ -43,7 +46,7 @@ SUPERADMIN_EMAIL (seed script only)
 - [ ] Switch domain on step 1 after reaching step 2 → questions reload, answers reset
 - [ ] Close A → vanishes from dropdown; direct submit to A fails
 - [ ] /status with right SRN + wrong email → "No application found"; right pair → status "applied", no WhatsApp link
-- [ ] head1 shortlists one (single) and two (bulk) → status + shortlistedAt update; sendShortlistEmail stub called (no-op)
+- [ ] head1 shortlists one (single) and two (bulk) → status + shortlistedAt update; email arrives with a /status link (or is skipped if SMTP is unset)
 - [ ] /status for shortlisted applicant shows the WhatsApp link; rejected one shows no link
 - [ ] head1 sees only A's applicants; filter by status + search work; detail shows labelled answers
 - [ ] head1 CANNOT see B: Firestore query for domainId==B → permission-denied; POST /api/admin/applications/status with a B id → 403; /admin/superadmin → no access
@@ -58,3 +61,10 @@ SUPERADMIN_EMAIL (seed script only)
 - Images upload to Cloudinary (signed, role-checked server route) or can be pasted as https URLs. Set the three CLOUDINARY_* env vars locally and on Vercel.
 - Superadmins can add/remove other superadmins in /admin/superadmin.
 - Republish firestore.rules (events write rules changed).
+
+## V4: email, rate limiting, announcements
+
+- Shortlist emails: set `SMTP_*`, `MAIL_FROM`, `NEXT_PUBLIC_SITE_URL` (local + Vercel). If `SMTP_HOST` is empty, emails are skipped and shortlisting still works. The email links to /status; it never contains the WhatsApp link. SMTP failures are reported in the Applicants page message and never block shortlisting.
+- /api/status limits: 10 lookups/min per IP and 30/hour per SRN. Set `UPSTASH_REDIS_REST_URL`/`_TOKEN` for limits shared across Vercel instances; without them it falls back to per-instance memory.
+- /admin/announcements: superadmin or head of the `events` domain. Writes go through /api/admin/announcements (Admin SDK); `firestore.rules` are unchanged.
+- Test: shortlist 1 and 3 applicants with SMTP set (check inbox, subject, /status link); with SMTP unset (no error); 11th /api/status call in a minute returns 429 with Retry-After; create, edit, unpublish, delete an announcement and check /announcements within ~60s; a domainHead of another domain gets 403 from /api/admin/announcements.
