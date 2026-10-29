@@ -31,26 +31,26 @@ FIREBASE_ADMIN_PROJECT_ID / _CLIENT_EMAIL / _PRIVATE_KEY (server only)
 SUPERADMIN_EMAIL (seed script only)
 
 ## Test checklist
-[ ] Seed script creates users/<your email> as superadmin; /admin/superadmin loads
-[ ] Create 2 domains (A, B): both start closed and are NOT in the /join dropdown
-[ ] Assign head1@ → A, head2@ → B
-[ ] head1: add questions (one of each type), reorder, edit, delete one; set WhatsApp link; open A
-[ ] /join: A appears, B hidden; pick A → step 2 shows A's questions in order
-[ ] Submit with a required field empty / bad link / bad phone → blocked
-[ ] Submit valid → confirmation; doc id is SRN_A in Firestore
-[ ] Submit same SRN + A again → "already applied" error (works with different casing of SRN)
-[ ] Same SRN + B (after opening B) → allowed
-[ ] Switch domain on step 1 after reaching step 2 → questions reload, answers reset
-[ ] Close A → vanishes from dropdown; direct submit to A fails
-[ ] /status with right SRN + wrong email → "No application found"; right pair → status "applied", no WhatsApp link
-[ ] head1 shortlists one (single) and two (bulk) → status + shortlistedAt update; sendShortlistEmail stub called (no-op)
-[ ] /status for shortlisted applicant shows the WhatsApp link; rejected one shows no link
-[ ] head1 sees only A's applicants; filter by status + search work; detail shows labelled answers
-[ ] head1 CANNOT see B: Firestore query for domainId==B → permission-denied; POST /api/admin/applications/status with a B id → 403; /admin/superadmin → no access
-[ ] head1 cannot change domain name or other domains' questions/WhatsApp link (rules emulator)
-[ ] Signed-out / random Google account: /admin/* shows no access; reading /applications from console is denied
-[ ] Superadmin: counts per domain correct, "Manage" opens that domain, CSV downloads (answers use question labels)
-[ ] Rules unit test: unauthenticated create with status "shortlisted" is denied
+- [ ] Seed script creates users/<your email> as superadmin; /admin/superadmin loads
+- [ ] Create 2 domains (A, B): both start closed and are NOT in the /join dropdown
+- [ ] Assign head1@ → A, head2@ → B
+- [ ] head1: add questions (one of each type), reorder, edit, delete one; set WhatsApp link; open A
+- [ ] /join: A appears, B hidden; pick A → step 2 shows A's questions in order
+- [ ] Submit with a required field empty / bad link / bad phone → blocked
+- [ ] Submit valid → confirmation; doc id is SRN_A in Firestore
+- [ ] Submit same SRN + A again → "already applied" error (works with different casing of SRN)
+- [ ] Same SRN + B (after opening B) → allowed
+- [ ] Switch domain on step 1 after reaching step 2 → questions reload, answers reset
+- [ ] Close A → vanishes from dropdown; direct submit to A fails
+- [ ] /status with right SRN + wrong email → "No application found"; right pair → status "applied", no WhatsApp link
+- [ ] head1 shortlists one (single) and two (bulk) → status + shortlistedAt update; sendShortlistEmail stub called (no-op)
+- [ ] /status for shortlisted applicant shows the WhatsApp link; rejected one shows no link
+- [ ] head1 sees only A's applicants; filter by status + search work; detail shows labelled answers
+- [ ] head1 CANNOT see B: Firestore query for domainId==B → permission-denied; POST /api/admin/applications/status with a B id → 403; /admin/superadmin → no access
+ -[ ] head1 cannot change domain name or other domains' questions/WhatsApp link (rules emulator)
+- [ ] Signed-out / random Google account: /admin/* shows no access; reading /applications from console is denied
+- [ ] Superadmin: counts per domain correct, "Manage" opens that domain, CSV downloads (answers use question labels)
+- [ ] Rules unit test: unauthenticated create with status "shortlisted" is denied
 
 ## V3: events management
 - /admin/events — superadmin or the head of the domain with slug `events` can add/edit/delete events.
