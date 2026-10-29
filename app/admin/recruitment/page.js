@@ -32,6 +32,7 @@ function Panel({ auth }) {
       <div className="rc-row">
         <h1>Recruitment</h1>
         <span className="rc-muted">{auth.user.email} ({auth.profile.role})</span>
+        {(isSuper || auth.profile.domainId === "events") && <a className="rc-btn ghost" href="/admin/events">Manage events</a>}
         <button className="rc-btn ghost" onClick={auth.signOut}>Sign out</button>
       </div>
       {isSuper && (

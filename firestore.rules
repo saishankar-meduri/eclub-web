@@ -20,9 +20,24 @@ service cloud.firestore {
     }
 
     // ---------- V1 public content ----------
+    function canManageEvents() { return isSuper() || isHeadOf('events'); }
+    function validEvent(id) {
+      let e = request.resource.data;
+      return e.keys().hasOnly(['title','slug','description','schedule','rules','date','venue','fee','team_size','banner_url','registration_url','status','published','images'])
+        && e.keys().hasAll(['title','slug','date','status','published'])
+        && e.title is string && e.title.size() > 0 && e.title.size() <= 150
+        && e.slug == id && id.matches('^[a-z0-9-]{1,80}$')
+        && e.date is timestamp
+        && e.status in ['upcoming','live','past']
+        && e.published is bool
+        && (!('fee' in e) || e.fee is number)
+        && (!('team_size' in e) || e.team_size is number)
+        && (!('images' in e) || (e.images is list && e.images.size() <= 10));
+    }
     match /events/{id} {
-      allow read: if resource.data.published == true;
-      allow write: if false;
+      allow read: if resource.data.published == true || canManageEvents();
+      allow create, update: if canManageEvents() && validEvent(id);
+      allow delete: if canManageEvents();
     }
     match /announcements/{id} {
       allow read: if resource.data.published == true;
@@ -84,7 +99,7 @@ service cloud.firestore {
       return d.keys().hasOnly(['name','srn','email','phone','year','branch','domainId','answers','status','createdAt','shortlistedAt'])
         && d.keys().hasAll(['name','srn','email','phone','year','branch','domainId','answers','status','createdAt'])
         && d.name is string && d.name.size() >= 2 && d.name.size() <= 100
-        && d.srn is string && d.srn.matches('^[A-Z0-9]{8,16}$')
+        && d.srn is string && d.srn.matches('^PES2UG[0-9]{2}(CS|AM|EC)[0-9]{3}$')
         && d.email is string && d.email.size() <= 254
         && d.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$') && d.email == d.email.lower()
         && d.phone is string && d.phone.matches('^[0-9]{10}$')

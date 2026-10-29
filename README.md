@@ -64,3 +64,10 @@ SUPERADMIN_EMAIL (seed script only)
 [ ] Signed-out / random Google account: /admin/* shows no access; reading /applications from console is denied
 [ ] Superadmin: counts per domain correct, "Manage" opens that domain, CSV downloads (answers use question labels)
 [ ] Rules unit test: unauthenticated create with status "shortlisted" is denied
+
+## V3: events management
+- /admin/events — superadmin or the head of the domain with slug `events` can add/edit/delete events.
+- Create a domain named "Events" (slug becomes `events`) in /admin/superadmin and assign its head. Keep it closed if it is not recruiting.
+- Images upload to Cloudinary (signed, role-checked server route) or can be pasted as https URLs. Set the three CLOUDINARY_* env vars locally and on Vercel.
+- Superadmins can add/remove other superadmins in /admin/superadmin.
+- Republish firestore.rules (events write rules changed).

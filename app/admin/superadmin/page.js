@@ -15,6 +15,8 @@ function Panel({ auth }) {
   const [nd, setNd] = useState({ name: "", description: "" });
   const [hd, setHd] = useState({ email: "", domainId: "" });
   const [msg, setMsg] = useState("");
+  const [admins, setAdmins] = useState([]);
+  const [na, setNa] = useState("");
 
   const load = useCallback(async () => {
     const ds = (await getDocs(collection(db, "domains"))).docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -28,6 +30,7 @@ function Panel({ auth }) {
     );
     setRows(withCounts);
     setHeads((await getDocs(query(collection(db, "users"), where("role", "==", "domainHead")))).docs.map((d) => d.data()));
+    setAdmins((await getDocs(query(collection(db, "users"), where("role", "==", "superadmin")))).docs.map((d) => d.data()));
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -46,6 +49,8 @@ function Panel({ auth }) {
     setMsg("");
     const email = hd.email.trim().toLowerCase();
     if (!EMAIL_RE.test(email) || !hd.domainId) return setMsg("Enter email and pick a domain");
+    const ex = await getDoc(doc(db, "users", email));
+    if (ex.exists() && ex.data().role === "superadmin") return setMsg("That account is a superadmin. Remove it from Superadmins first.");
     await setDoc(doc(db, "users", email), { email, role: "domainHead", domainId: hd.domainId });
     setHd({ email: "", domainId: "" });
     load();
@@ -53,6 +58,22 @@ function Panel({ auth }) {
 
   async function removeHead(email) {
     if (!confirm(`Remove ${email}?`)) return;
+    await deleteDoc(doc(db, "users", email));
+    load();
+  }
+
+  async function addAdmin() {
+    setMsg("");
+    const email = na.trim().toLowerCase();
+    if (!EMAIL_RE.test(email)) return setMsg("Enter a valid email");
+    await setDoc(doc(db, "users", email), { email, role: "superadmin", domainId: null });
+    setNa("");
+    load();
+  }
+
+  async function removeAdmin(email) {
+    if (email === auth.user.email.toLowerCase()) return setMsg("You can't remove yourself");
+    if (!confirm(`Remove superadmin ${email}?`)) return;
     await deleteDoc(doc(db, "users", email));
     load();
   }
@@ -70,6 +91,7 @@ function Panel({ auth }) {
     <>
       <div className="rc-row">
         <h1>Superadmin</h1>
+        <a className="rc-btn ghost" href="/admin/events">Manage events</a>
         <button className="rc-btn ghost" onClick={auth.signOut}>Sign out</button>
       </div>
       {msg && <p className="rc-err">{msg}</p>}
@@ -115,6 +137,28 @@ function Panel({ auth }) {
               <tr key={h.email}>
                 <td>{h.email}</td><td>{rows.find((d) => d.id === h.domainId)?.name || h.domainId}</td>
                 <td><button className="rc-btn ghost" onClick={() => removeHead(h.email)}>Remove</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="rc-card">
+        <h3>Superadmins</h3>
+        <p className="rc-muted">Superadmins can do everything, including adding other superadmins.</p>
+        <div className="rc-row">
+          <input placeholder="new-admin@email.com (Google account)" value={na} onChange={(e) => setNa(e.target.value)} />
+        </div>
+        <button className="rc-btn" onClick={addAdmin}>Add superadmin</button>
+        <table>
+          <tbody>
+            {admins.map((a) => (
+              <tr key={a.email}>
+                <td>{a.email}</td>
+                <td>
+                  {a.email !== auth.user.email.toLowerCase() && (
+                    <button className="rc-btn ghost" onClick={() => removeAdmin(a.email)}>Remove</button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

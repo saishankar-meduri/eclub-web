@@ -1,7 +1,7 @@
 "use client";
 import { useAuth } from "../lib/useAuth";
 
-export default function AdminGate({ roles, children }) {
+export default function AdminGate({ roles, allow = () => true, children }) {
   const a = useAuth();
   if (a.loading) return <div className="container section rc"><p className="rc-muted">Loading…</p></div>;
   if (!a.user)
@@ -13,7 +13,7 @@ export default function AdminGate({ roles, children }) {
         </div>
       </div>
     );
-  if (!a.profile || !roles.includes(a.profile.role))
+  if (!a.profile || !roles.includes(a.profile.role) || !allow(a.profile))
     return (
       <div className="container section rc">
         <div className="rc-card">

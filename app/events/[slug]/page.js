@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import StatusBadge from '../../../components/StatusBadge';
 import { getEvents, getEventBySlug } from '../../../lib/data';
 import { formatDate, formatTime, formatFee, formatTeam, lines } from '../../../lib/format';
+import { eventImages, optimize } from '../../../lib/images';
 
 export const revalidate = 60;
 
@@ -24,6 +25,7 @@ export default async function EventPage({ params }) {
 
   const schedule = lines(event.schedule);
   const rules = lines(event.rules);
+  const imgs = eventImages(event);
 
   return (
     <div className="container section">
@@ -34,9 +36,14 @@ export default async function EventPage({ params }) {
         <h1>{event.title}</h1>
       </div>
 
-      {event.banner_url && (
+      {imgs.length > 0 && (
         <div className="banner banner-large">
-          <img className="cover" src={event.banner_url} alt="" />
+          <img className="cover" src={optimize(imgs[0], 1400)} alt="" />
+        </div>
+      )}
+      {imgs.length > 1 && (
+        <div className="gallery">
+          {imgs.slice(1).map((src) => <img key={src} src={optimize(src, 600)} alt="" loading="lazy" />)}
         </div>
       )}
 

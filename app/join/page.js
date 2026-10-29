@@ -23,13 +23,14 @@ export default function Join() {
       .then((s) => setDomains(s.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name))))
       .catch(() => setMsg("Could not load domains. Refresh and try again."));
   }, []);
-    const set = (k) => (e) => setForm({ ...form, [k]: k === "srn" ? e.target.value.toUpperCase() : e.target.value });
-    const domainName = domains.find((d) => d.id === form.domainId)?.name;
+
+  const set = (k) => (e) => setForm({ ...form, [k]: k === "srn" ? e.target.value.toUpperCase() : e.target.value });
+  const domainName = domains.find((d) => d.id === form.domainId)?.name;
 
   function validate1() {
     const e = {};
     if (form.name.trim().length < 2) e.name = "Enter your name";
-    if (!SRN_RE.test(form.srn.trim().toUpperCase())) e.srn = "Enter a valid SRN";
+    if (!SRN_RE.test(form.srn.trim().toUpperCase())) e.srn = "Format: PES2UG25CS304";
     if (!EMAIL_RE.test(form.email.trim())) e.email = "Enter a valid email";
     if (!PHONE_RE.test(form.phone.trim())) e.phone = "10-digit phone number";
     if (!form.year) e.year = "Select year";
