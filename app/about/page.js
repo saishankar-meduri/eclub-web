@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { SITE } from '../../lib/site';
+import KineticCore from '../../components/KineticCore';
 
 export const metadata = {
   title: 'About',
@@ -95,24 +96,45 @@ export default function AboutPage() {
     <div className="about-page">
       {/* SECTION 1: HERO */}
       <section className="about-container about-hero" aria-labelledby="about-hero-title">
-        <span className="about-eyebrow">
-          The Entrepreneurship Club · PES University, EC Campus
-        </span>
-        <h1 id="about-hero-title" className="about-hero-title">
-          Dream. Hustle. Build What’s Next.
-        </h1>
-        <p className="about-hero-lead">
-          An entrepreneurial community at PES University where curious minds come together to
-          explore ideas, experiment fearlessly, and turn ambition into action.
-        </p>
+        <div className="about-hero-grid">
+          <div>
+            <span className="about-eyebrow">
+              The Entrepreneurship Club · PES University, EC Campus
+            </span>
+            <h1 id="about-hero-title" className="about-hero-title">
+              Dream. Hustle. Build What’s Next.
+            </h1>
+            <p className="about-hero-lead">
+              An entrepreneurial community at PES University where curious minds come together to
+              explore ideas, experiment fearlessly, and turn ambition into action.
+            </p>
 
-        <div className="about-actions">
-          <Link href="/join" className="about-btn-primary">
-            Join the club <span className="about-btn-arrow" aria-hidden="true">→</span>
-          </Link>
-          <Link href="/events" className="about-btn-secondary">
-            Explore events
-          </Link>
+            <div className="about-actions">
+              <Link href="/join" className="about-btn-primary">
+                Join the club <span className="about-btn-arrow" aria-hidden="true">→</span>
+              </Link>
+              <Link href="/events" className="about-btn-secondary">
+                Explore events
+              </Link>
+            </div>
+
+            <div className="about-hero-meta">
+              <div className="about-hero-meta-item">
+                <span className="about-hero-meta-val">0 to 1</span>
+                <span className="about-hero-meta-label">Ideation to execution</span>
+              </div>
+              <div className="about-hero-meta-item">
+                <span className="about-hero-meta-val">4 Tracks</span>
+                <span className="about-hero-meta-label">Tech · Design · Ops · Domain</span>
+              </div>
+              <div className="about-hero-meta-item">
+                <span className="about-hero-meta-val">PESU EC</span>
+                <span className="about-hero-meta-label">Electronic City Campus</span>
+              </div>
+            </div>
+          </div>
+
+          <KineticCore />
         </div>
 
         {/* Calm 3-step sequence with hairline dividers */}

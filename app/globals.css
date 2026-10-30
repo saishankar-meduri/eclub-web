@@ -311,11 +311,68 @@ p { max-width: 65ch; }
 }
 
 /* --------------------------------------------------------------------------
-   Section 1: Hero & Calm 3-Step Flow
+   Section 1: Hero & Spatial 3D Hook
    -------------------------------------------------------------------------- */
 .about-hero {
-  padding-top: 100px;
+  padding-top: 80px;
   padding-bottom: 90px;
+}
+
+.about-hero-grid {
+  display: grid;
+  gap: 48px;
+  align-items: center;
+}
+
+@media (min-width: 900px) {
+  .about-hero-grid {
+    grid-template-columns: 1.15fr 0.95fr;
+    min-height: 520px;
+  }
+}
+
+.about-kinetic-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-width: 440px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.about-kinetic-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.about-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  margin-top: 36px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.about-hero-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.about-hero-meta-val {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.about-hero-meta-label {
+  font-size: 0.75rem;
+  color: var(--muted);
 }
 
 .about-hero-steps {
