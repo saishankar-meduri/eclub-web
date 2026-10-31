@@ -1,8 +1,17 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, where, orderBy, doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../../lib/firebase";
 import { BRANCHES, YEARS, SRN_RE, EMAIL_RE, PHONE_RE, URL_RE } from "../../lib/constants";
+
+let fsPromise = null;
+function loadFirestore() {
+  if (!fsPromise) {
+    fsPromise = Promise.all([import("firebase/firestore"), import("../../lib/firebase")]).then(
+      ([fs, fb]) => ({ ...fs, db: fb.db })
+    );
+  }
+  return fsPromise;
+}
 
 const empty = { name: "", srn: "", email: "", phone: "", year: "", branch: "", domainId: "" };
 
@@ -19,13 +28,47 @@ export default function Join() {
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
-    getDocs(query(collection(db, "domains"), where("open", "==", true)))
-      .then((s) => setDomains(s.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name))))
-      .catch(() => setMsg("Could not load domains. Refresh and try again."));
+    let cancelled = false;
+    let idleId;
+    let timerId;
+
+    const fetchDomains = () => {
+      loadFirestore()
+        .then(({ db, collection, getDocs, query, where }) =>
+          getDocs(query(collection(db, "domains"), where("open", "==", true)))
+        )
+        .then((s) => {
+          if (cancelled) return;
+          setDomains(
+            s.docs
+              .map((d) => ({ id: d.id, ...d.data() }))
+              .sort((a, b) => a.name.localeCompare(b.name))
+          );
+        })
+        .catch(() => {
+          if (!cancelled) setMsg("Could not load domains. Refresh and try again.");
+        });
+    };
+
+    if (typeof window.requestIdleCallback === "function") {
+      idleId = window.requestIdleCallback(fetchDomains, { timeout: 220 });
+    } else {
+      timerId = window.setTimeout(fetchDomains, 90);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleId && typeof window.cancelIdleCallback === "function") {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timerId) window.clearTimeout(timerId);
+    };
   }, []);
 
-  const set = (k) => (e) => setForm({ ...form, [k]: k === "srn" ? e.target.value.toUpperCase() : e.target.value });
-  const domainName = domains.find((d) => d.id === form.domainId)?.name;
+  const set = (k) => (e) =>
+    setForm({ ...form, [k]: k === "srn" ? e.target.value.toUpperCase() : e.target.value });
+  const selectedDomain = domains.find((d) => d.id === form.domainId);
+  const domainName = selectedDomain?.name;
 
   function validate1() {
     const e = {};
@@ -46,7 +89,10 @@ export default function Join() {
     setBusy(true);
     try {
       if (loadedFor !== form.domainId) {
-        const s = await getDocs(query(collection(db, `domains/${form.domainId}/questions`), orderBy("order")));
+        const { db, collection, getDocs, query, orderBy } = await loadFirestore();
+        const s = await getDocs(
+          query(collection(db, `domains/${form.domainId}/questions`), orderBy("order"))
+        );
         setQuestions(s.docs.map((d) => ({ id: d.id, ...d.data() })));
         setAnswers({});
         setLoadedFor(form.domainId);
@@ -79,6 +125,7 @@ export default function Join() {
     const clean = {};
     for (const q of questions) if ((answers[q.id] || "").trim()) clean[q.id] = answers[q.id].trim();
     try {
+      const { db, doc, setDoc, serverTimestamp } = await loadFirestore();
       await setDoc(doc(db, "applications", `${srn}_${form.domainId}`), {
         name: form.name.trim(),
         srn,
@@ -102,90 +149,238 @@ export default function Join() {
     setBusy(false);
   }
 
-  if (done)
+  if (done) {
     return (
-      <div className="container section rc">
-        <div className="rc-card">
-          <h2>Application received</h2>
-          <p>Thanks {form.name.split(" ")[0]}, your application for <b>{domainName}</b> is in.</p>
-          <p className="rc-muted">Check progress anytime on the <a href="/status">status page</a> with your SRN and email.</p>
+      <div className="page-shell">
+        <div className="container ed-page-section rc">
+          <div className="ed-form-shell">
+            <div className="rc-card ed-success-card">
+              <div className="modern-kicker">
+                <span className="ed-dot" aria-hidden="true" />
+                <span>Application submitted</span>
+              </div>
+              <h1 className="ed-section-title">
+                Application <span className="modern-title-dim">received.</span>
+              </h1>
+              <p className="ed-page-sub">
+                Thanks {form.name.split(" ")[0]}, your application for <strong>{domainName}</strong>{" "}
+                is now in review.
+              </p>
+              <div className="ed-actions">
+                <Link href="/status" className="btn-pill-primary">
+                  Track application status <span className="btn-arrow" aria-hidden="true">→</span>
+                </Link>
+                <Link href="/" className="btn-pill-secondary">
+                  Back to home
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
+  }
 
   return (
-    <div className="container section rc">
-      <h1>Join the club</h1>
-      <p className="rc-muted">Step {step} of 2</p>
-      {msg && <p className="rc-err">{msg}</p>}
-
-      {step === 1 && (
-        <div className="rc-card">
-          {[["name", "Full name"], ["srn", "SRN"], ["email", "Email"], ["phone", "Phone (10 digits)"]].map(([k, l]) => (
-            <div key={k}>
-              <label>{l}</label>
-              <input value={form[k]} onChange={set(k)} />
-              {errors[k] && <div className="rc-err">{errors[k]}</div>}
+    <div className="page-shell">
+      <div className="container ed-page-section rc">
+        <header className="modern-page-header modern-header-split">
+          <div>
+            <div className="modern-kicker">
+              <span className="modern-kicker-idx">04</span>
+              <span className="modern-kicker-rule" aria-hidden="true" />
+              <span>Recruitment · PESU EC</span>
             </div>
-          ))}
-          <div className="rc-row">
-            <div>
-              <label>Year</label>
-              <select value={form.year} onChange={set("year")}>
-                <option value="">Select</option>
-                {YEARS.map((y) => <option key={y}>{y}</option>)}
-              </select>
-              {errors.year && <div className="rc-err">{errors.year}</div>}
-            </div>
-            <div>
-              <label>Branch</label>
-              <select value={form.branch} onChange={set("branch")}>
-                <option value="">Select</option>
-                {BRANCHES.map((b) => <option key={b}>{b}</option>)}
-              </select>
-              {errors.branch && <div className="rc-err">{errors.branch}</div>}
-            </div>
+            <h1 className="modern-display-title">
+              Join the club. <span className="modern-title-dim">Build with us.</span>
+            </h1>
           </div>
-          <label>Domain</label>
-          <select value={form.domainId} onChange={set("domainId")}>
-            <option value="">{domains.length ? "Select a domain" : "No domains open"}</option>
-            {domains.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
-          {errors.domainId && <div className="rc-err">{errors.domainId}</div>}
-          {form.domainId && <p className="rc-muted">{domains.find((d) => d.id === form.domainId)?.description}</p>}
-          <button className="rc-btn" onClick={next} disabled={busy}>{busy ? "Loading…" : "Next"}</button>
-        </div>
-      )}
+          <p className="modern-header-aside">
+            Pick the domain where you do your sharpest work and tell us what drives you to build.
+          </p>
+        </header>
 
-      {step === 2 && (
-        <div className="rc-card">
-          <h3>{domainName}</h3>
-          {questions.length === 0 && <p className="rc-muted">No extra questions for this domain.</p>}
-          {questions.map((q) => (
-            <div key={q.id}>
-              <label>{q.label}{q.required && " *"}</label>
-              {q.type === "long" ? (
-                <textarea rows={5} value={answers[q.id] || ""} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })} />
-              ) : q.type === "mcq" ? (
-                <select value={answers[q.id] || ""} onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}>
-                  <option value="">Select</option>
-                  {q.options.map((o) => <option key={o}>{o}</option>)}
-                </select>
-              ) : (
-                <input
-                  type={q.type === "link" ? "url" : "text"}
-                  placeholder={q.type === "link" ? "https://" : ""}
-                  value={answers[q.id] || ""}
-                  onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
-                />
-              )}
-              {errors[q.id] && <div className="rc-err">{errors[q.id]}</div>}
+        <div className="ed-form-layout">
+          <aside className="ed-form-aside">
+            <div className="step-rail step-rail-flush" aria-label="Application steps">
+              <div className={`step-pill${step === 1 ? " active" : " done"}`}>
+                <span className="step-num">01</span>
+                <span>Your details &amp; domain</span>
+              </div>
+              <div className={`step-pill${step === 2 ? " active" : ""}`}>
+                <span className="step-num">02</span>
+                <span>Domain questions</span>
+              </div>
             </div>
-          ))}
-          <button className="rc-btn ghost" onClick={() => setStep(1)}>Back</button>
-          <button className="rc-btn" onClick={submit} disabled={busy}>{busy ? "Submitting…" : "Submit"}</button>
+
+            <div className="ed-aside-note">
+              <p className="rc-muted">Already submitted an application?</p>
+              <Link href="/status" className="inline-arrow-link">
+                Check your status <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+          </aside>
+
+          <div className="ed-form-main">
+            {msg && <div className="form-alert">{msg}</div>}
+
+            {step === 1 && (
+              <div className="rc-card ed-form-card">
+                <div className="form-field">
+                  <label>Full name</label>
+                  <input placeholder="Your full name" value={form.name} onChange={set("name")} />
+                  {errors.name && <div className="rc-err">{errors.name}</div>}
+                </div>
+
+                <div className="rc-row">
+                  <div className="form-field">
+                    <label>SRN</label>
+                    <input
+                      placeholder="PES2UG25CS304"
+                      value={form.srn}
+                      onChange={set("srn")}
+                    />
+                    {errors.srn && <div className="rc-err">{errors.srn}</div>}
+                  </div>
+                  <div className="form-field">
+                    <label>Phone (10 digits)</label>
+                    <input
+                      placeholder="9876543210"
+                      value={form.phone}
+                      onChange={set("phone")}
+                    />
+                    {errors.phone && <div className="rc-err">{errors.phone}</div>}
+                  </div>
+                </div>
+
+                <div className="form-field">
+                  <label>Email address</label>
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={form.email}
+                    onChange={set("email")}
+                  />
+                  {errors.email && <div className="rc-err">{errors.email}</div>}
+                </div>
+
+                <div className="rc-row">
+                  <div className="form-field">
+                    <label>Year</label>
+                    <select value={form.year} onChange={set("year")}>
+                      <option value="">Select year</option>
+                      {YEARS.map((y) => (
+                        <option key={y}>{y}</option>
+                      ))}
+                    </select>
+                    {errors.year && <div className="rc-err">{errors.year}</div>}
+                  </div>
+                  <div className="form-field">
+                    <label>Branch</label>
+                    <select value={form.branch} onChange={set("branch")}>
+                      <option value="">Select branch</option>
+                      {BRANCHES.map((b) => (
+                        <option key={b}>{b}</option>
+                      ))}
+                    </select>
+                    {errors.branch && <div className="rc-err">{errors.branch}</div>}
+                  </div>
+                </div>
+
+                <div className="form-field">
+                  <label>Domain</label>
+                  <select value={form.domainId} onChange={set("domainId")}>
+                    <option value="">
+                      {domains.length ? "Select a domain" : "No domains currently open"}
+                    </option>
+                    {domains.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.domainId && <div className="rc-err">{errors.domainId}</div>}
+                </div>
+
+                {selectedDomain?.description && (
+                  <div className="domain-callout">
+                    <span className="domain-callout-title">{selectedDomain.name}</span>
+                    <p>{selectedDomain.description}</p>
+                  </div>
+                )}
+
+                <div className="form-actions">
+                  <button className="btn-pill-primary" onClick={next} disabled={busy}>
+                    {busy ? "Loading…" : "Continue"}
+                    {!busy && <span className="btn-arrow" aria-hidden="true">→</span>}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="rc-card ed-form-card">
+                <div className="step2-head">
+                  <div className="modern-kicker">
+                    <span className="modern-kicker-idx">02</span>
+                    <span className="modern-kicker-rule" aria-hidden="true" />
+                    <span>Domain questionnaire</span>
+                  </div>
+                  <h2>{domainName}</h2>
+                </div>
+
+                {questions.length === 0 && (
+                  <p className="rc-muted">No additional questions for this domain — ready to submit.</p>
+                )}
+
+                {questions.map((q) => (
+                  <div key={q.id} className="form-field">
+                    <label>
+                      {q.label}
+                      {q.required && <span className="req-star"> *</span>}
+                    </label>
+                    {q.type === "long" ? (
+                      <textarea
+                        rows={5}
+                        value={answers[q.id] || ""}
+                        onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                      />
+                    ) : q.type === "mcq" ? (
+                      <select
+                        value={answers[q.id] || ""}
+                        onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                      >
+                        <option value="">Select an option</option>
+                        {q.options.map((o) => (
+                          <option key={o}>{o}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type={q.type === "link" ? "url" : "text"}
+                        placeholder={q.type === "link" ? "https://" : ""}
+                        value={answers[q.id] || ""}
+                        onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                      />
+                    )}
+                    {errors[q.id] && <div className="rc-err">{errors[q.id]}</div>}
+                  </div>
+                ))}
+
+                <div className="form-actions">
+                  <button className="btn-pill-secondary" onClick={() => setStep(1)}>
+                    <span aria-hidden="true">←</span> Back
+                  </button>
+                  <button className="btn-pill-primary" onClick={submit} disabled={busy}>
+                    {busy ? "Submitting…" : "Submit application"}
+                    {!busy && <span className="btn-arrow" aria-hidden="true">→</span>}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

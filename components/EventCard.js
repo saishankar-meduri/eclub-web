@@ -10,15 +10,24 @@ export default function EventCard({ event }) {
         {event.banner_url ? (
           <img className="cover" src={optimize(event.banner_url, 700)} alt="" loading="lazy" />
         ) : (
-          <img className="fallback" src="/logo.jpg" alt="" />
+          <img className="fallback logo-mark" src="/logo.jpg" alt="" />
         )}
       </div>
       <div className="card-body">
-        <StatusBadge status={event.status} />
-        <h3>{event.title}</h3>
-        <p className="muted">{formatDate(event.date)}, {formatTime(event.date)}</p>
-        {event.venue && <p className="muted">{event.venue}</p>}
-        <p className="muted">{formatFee(event.fee, event.team_size)}</p>
+        <div className="card-top">
+          <StatusBadge status={event.status} />
+          <span className="card-date">
+            {formatDate(event.date)} · {formatTime(event.date)}
+          </span>
+        </div>
+        <h3 className="card-title">{event.title}</h3>
+        {event.venue && <p className="card-venue">{event.venue}</p>}
+        <div className="card-footer">
+          <span className="card-fee">{formatFee(event.fee, event.team_size)}</span>
+          <span className="card-cta" aria-hidden="true">
+            Details <span className="btn-arrow">→</span>
+          </span>
+        </div>
       </div>
     </Link>
   );
