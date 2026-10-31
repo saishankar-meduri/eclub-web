@@ -8,18 +8,16 @@ export default function KineticCore() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
-    let animId;
+    let animId = 0;
     let isVisible = true;
     let width = 0;
     let height = 0;
 
-    // Check prefers-reduced-motion
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // Golden ratio for icosahedron vertices
     const phi = (1 + Math.sqrt(5)) / 2;
     const rawVertices = [
       [-1, phi, 0], [1, phi, 0], [-1, -phi, 0], [1, -phi, 0],
@@ -30,32 +28,40 @@ export default function KineticCore() {
       return [x / len, y / len, z / len];
     });
 
-    // Edges between vertices of icosahedron (distance is equal)
+    const V = rawVertices.length;
+    const pxArr = new Float32Array(V);
+    const pyArr = new Float32Array(V);
+    const depthArr = new Float32Array(V);
+
     const edges = [];
-    for (let i = 0; i < rawVertices.length; i++) {
-      for (let j = i + 1; j < rawVertices.length; j++) {
-        const dx = rawVertices[i][0] - rawVertices[j][0];
-        const dy = rawVertices[i][1] - rawVertices[j][1];
-        const dz = rawVertices[i][2] - rawVertices[j][2];
-        const dist = Math.hypot(dx, dy, dz);
-        if (Math.abs(dist - 1.05146) < 0.1) {
-          edges.push([i, j]);
-        }
+    for (let i = 0; i < V; i++) {
+      for (let j = i + 1; j < V; j++) {
+        const dist = Math.hypot(
+          rawVertices[i][0] - rawVertices[j][0],
+          rawVertices[i][1] - rawVertices[j][1],
+          rawVertices[i][2] - rawVertices[j][2]
+        );
+        if (Math.abs(dist - 1.05146) < 0.1) edges.push([i, j]);
       }
     }
 
-    // Outer orbital particles
-    const particleCount = 28;
+    let seed = 19;
+    const rand = () => {
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return seed / 4294967296;
+    };
+
+    const particleCount = 26;
     const particles = Array.from({ length: particleCount }, (_, idx) => {
       const theta = (idx / particleCount) * Math.PI * 2;
-      const u = (Math.random() - 0.5) * 2;
+      const u = (rand() - 0.5) * 2;
       const r = Math.sqrt(1 - u * u);
       return {
         baseX: r * Math.cos(theta) * 1.35,
         baseY: r * Math.sin(theta) * 1.35,
         baseZ: u * 1.35,
-        phase: Math.random() * Math.PI * 2,
-        speed: 0.015 + Math.random() * 0.01,
+        phase: rand() * Math.PI * 2,
+        speed: 0.55 + rand() * 0.35,
       };
     });
 
@@ -64,160 +70,165 @@ export default function KineticCore() {
     let targetAngleX = 0.2;
     let targetAngleY = 0.4;
 
-    function resize() {
+    let rectLeft = 0;
+    let rectTop = 0;
+
+    const syncRect = () => {
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
+      rectLeft = rect.left;
+      rectTop = rect.top;
+    };
+
+    const resize = () => {
+      if (!canvas) return;
+      const cw = canvas.clientWidth;
+      const ch = canvas.clientHeight;
+      if (!cw || !ch) return;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      width = rect.width;
-      height = rect.height;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      ctx.scale(dpr, dpr);
-    }
+      width = cw;
+      height = ch;
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      syncRect();
+    };
 
     resize();
-    window.addEventListener('resize', resize);
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null;
+    resizeObserver?.observe(canvas);
+    window.addEventListener('resize', resize, { passive: true });
+    window.addEventListener('scroll', syncRect, { passive: true });
 
-    function onMouseMove(e) {
-      if (prefersReducedMotion) return;
-      const rect = canvas.getBoundingClientRect();
-      const mx = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
-      const my = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2);
-      targetAngleY = mx * 0.75;
-      targetAngleX = -my * 0.75;
-    }
+    const onPointerMove = (e) => {
+      if (prefersReducedMotion || !width || !height) return;
+      const mx = (e.clientX - (rectLeft + width * 0.5)) / (width * 0.5);
+      const my = (e.clientY - (rectTop + height * 0.5)) / (height * 0.5);
+      targetAngleY = Math.max(-1.2, Math.min(1.2, mx * 0.65));
+      targetAngleX = Math.max(-1.0, Math.min(1.0, -my * 0.65));
+    };
 
-    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
 
-    // Pause when not visible
     const observer = new IntersectionObserver(([entry]) => {
       isVisible = entry.isIntersecting;
     });
     observer.observe(canvas);
 
-    let time = 0;
+    let lastNow = performance.now();
+    let elapsed = 0;
 
-    function render() {
-      if (!isVisible) {
-        animId = requestAnimationFrame(render);
+    const render = (now) => {
+      animId = requestAnimationFrame(render);
+      if (!isVisible || !width || !height) {
+        lastNow = now;
         return;
       }
 
-      time += 0.015;
+      const dt = Math.min(0.05, Math.max(0.001, (now - lastNow) * 0.001));
+      lastNow = now;
+      elapsed += dt;
+
       if (!prefersReducedMotion) {
-        angleX += (targetAngleX - angleX) * 0.05 + 0.002;
-        angleY += (targetAngleY - angleY) * 0.05 + 0.004;
+        const spring = 1 - Math.exp(-3.2 * dt);
+        angleX += (targetAngleX - angleX) * spring + 0.12 * dt;
+        angleY += (targetAngleY - angleY) * spring + 0.24 * dt;
       }
 
       ctx.clearRect(0, 0, width, height);
 
       const isLight = document.documentElement.dataset.theme === 'light';
-      const edgeColor = isLight ? 'rgba(0, 0, 0, 0.16)' : 'rgba(255, 255, 255, 0.2)';
       const nodeColor = isLight ? '#111827' : '#ffffff';
-      const glowColor = isLight ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.06)';
+      const glowColor = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)';
 
-      const cx = width / 2;
-      const cy = height / 2;
+      const cx = width * 0.5;
+      const cy = height * 0.5;
       const radius = Math.min(width, height) * 0.38;
 
-      // Draw subtle background radial aura
       const grad = ctx.createRadialGradient(cx, cy, radius * 0.2, cx, cy, radius * 1.4);
       grad.addColorStop(0, glowColor);
-      grad.addColorStop(1, 'transparent');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.arc(cx, cy, radius * 1.4, 0, Math.PI * 2);
       ctx.fill();
 
-      // Rotation matrix values
       const cosX = Math.cos(angleX);
       const sinX = Math.sin(angleX);
       const cosY = Math.cos(angleY);
       const sinY = Math.sin(angleY);
+      const fov = 3.2;
 
-      function project([x, y, z]) {
-        // Rotate Y
+      for (let i = 0; i < V; i++) {
+        const [x, y, z] = rawVertices[i];
         const x1 = x * cosY + z * sinY;
         const z1 = -x * sinY + z * cosY;
-        // Rotate X
         const y2 = y * cosX - z1 * sinX;
         const z2 = y * sinX + z1 * cosX;
-
-        // Perspective projection
-        const fov = 3.2;
         const scale = fov / (fov + z2);
-        return {
-          px: cx + x1 * radius * scale,
-          py: cy + y2 * radius * scale,
-          depth: scale,
-          z: z2,
-        };
+        pxArr[i] = cx + x1 * radius * scale;
+        pyArr[i] = cy + y2 * radius * scale;
+        depthArr[i] = scale;
       }
 
-      const projected = rawVertices.map(project);
-
-      // Draw edges
       ctx.lineWidth = 1;
-      for (const [i, j] of edges) {
-        const p1 = projected[i];
-        const p2 = projected[j];
-        const avgDepth = (p1.depth + p2.depth) / 2;
+      for (let k = 0; k < edges.length; k++) {
+        const [i, j] = edges[k];
+        const avgDepth = (depthArr[i] + depthArr[j]) * 0.5;
         const alpha = Math.max(0.08, Math.min(0.5, (avgDepth - 0.7) * 0.6));
-
         ctx.strokeStyle = isLight
-          ? `rgba(0, 0, 0, ${alpha * 0.8})`
-          : `rgba(255, 255, 255, ${alpha})`;
+          ? `rgba(0,0,0,${(alpha * 0.8).toFixed(3)})`
+          : `rgba(255,255,255,${alpha.toFixed(3)})`;
         ctx.beginPath();
-        ctx.moveTo(p1.px, p1.py);
-        ctx.lineTo(p2.px, p2.py);
+        ctx.moveTo(pxArr[i], pyArr[i]);
+        ctx.lineTo(pxArr[j], pyArr[j]);
         ctx.stroke();
       }
 
-      // Draw vertices (nodes)
-      for (let i = 0; i < projected.length; i++) {
-        const p = projected[i];
-        const nodeSize = Math.max(2, 3.2 * p.depth);
-        const nodeAlpha = Math.max(0.2, Math.min(1, (p.depth - 0.7) * 1.2));
-
-        ctx.fillStyle = nodeColor;
-        ctx.globalAlpha = nodeAlpha;
+      ctx.fillStyle = nodeColor;
+      for (let i = 0; i < V; i++) {
+        const d = depthArr[i];
+        const nodeSize = Math.max(2, 3.2 * d);
+        ctx.globalAlpha = Math.max(0.2, Math.min(1, (d - 0.7) * 1.2));
         ctx.beginPath();
-        ctx.arc(p.px, p.py, nodeSize, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
-
-      // Draw orbiting constellation particles
-      for (const pt of particles) {
-        const currentAngle = time * pt.speed + pt.phase;
-        const px = pt.baseX * Math.cos(currentAngle) - pt.baseZ * Math.sin(currentAngle);
-        const pz = pt.baseX * Math.sin(currentAngle) + pt.baseZ * Math.cos(currentAngle);
-        const p = project([px, pt.baseY, pz]);
-
-        const pSize = Math.max(1, 1.8 * p.depth);
-        ctx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.45)' : 'rgba(255, 255, 255, 0.6)';
-        ctx.beginPath();
-        ctx.arc(p.px, p.py, pSize, 0, Math.PI * 2);
+        ctx.arc(pxArr[i], pyArr[i], nodeSize, 0, Math.PI * 2);
         ctx.fill();
       }
+      ctx.globalAlpha = 1;
 
-      animId = requestAnimationFrame(render);
-    }
+      ctx.fillStyle = isLight ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.6)';
+      ctx.beginPath();
+      for (let i = 0; i < particles.length; i++) {
+        const pt = particles[i];
+        const ang = elapsed * pt.speed + pt.phase;
+        const bx = pt.baseX * Math.cos(ang) - pt.baseZ * Math.sin(ang);
+        const bz = pt.baseX * Math.sin(ang) + pt.baseZ * Math.cos(ang);
+        const x1 = bx * cosY + bz * sinY;
+        const z1 = -bx * sinY + bz * cosY;
+        const y2 = pt.baseY * cosX - z1 * sinX;
+        const z2 = pt.baseY * sinX + z1 * cosX;
+        const sc = fov / (fov + z2);
+        const pr = Math.max(1, 1.8 * sc);
+        const ppx = cx + x1 * radius * sc;
+        const ppy = cy + y2 * radius * sc;
+        ctx.moveTo(ppx + pr, ppy);
+        ctx.arc(ppx, ppy, pr, 0, Math.PI * 2);
+      }
+      ctx.fill();
+    };
 
-    render();
+    animId = requestAnimationFrame(render);
 
     return () => {
       cancelAnimationFrame(animId);
+      resizeObserver?.disconnect();
       window.removeEventListener('resize', resize);
-      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('scroll', syncRect);
+      window.removeEventListener('pointermove', onPointerMove);
       observer.disconnect();
     };
   }, []);
 
-  return (
-    <div className="about-kinetic-wrap" aria-hidden="true">
-      <canvas ref={canvasRef} className="about-kinetic-canvas" />
-    </div>
-  );
+  return <canvas ref={canvasRef} className="about-kinetic-canvas" aria-hidden="true" />;
 }
-

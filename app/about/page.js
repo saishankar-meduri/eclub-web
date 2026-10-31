@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { SITE } from '../../lib/site';
-import KineticCore from '../../components/KineticCore';
+import DeferredVisual from '../../components/DeferredVisual';
 
 export const metadata = {
   title: 'About',
@@ -34,59 +34,64 @@ const DOMAINS = [
 
 export default function AboutPage() {
   return (
-    <div className="about-page">
+    <div className="page-shell">
       {/* SECTION 1: HERO */}
-      <section className="about-container about-hero" aria-labelledby="about-hero-title">
-        <div className="about-hero-grid">
+      <section className="container ed-hero" aria-labelledby="about-hero-title">
+        <div className="ed-hero-grid">
           <div>
-            <span className="about-eyebrow">
-              The Entrepreneurship Club · PES University, EC Campus
-            </span>
-            <h1 id="about-hero-title" className="about-hero-title">
-              Dream. Hustle. Build What’s Next.
+            <div className="modern-kicker">
+              <span className="modern-kicker-idx">03</span>
+              <span className="modern-kicker-rule" aria-hidden="true" />
+              <span>About E-Club · PESU EC</span>
+            </div>
+            <h1 id="about-hero-title" className="modern-display-title ed-hero-display">
+              Dream. Hustle. <span className="modern-title-dim">Build what’s next.</span>
             </h1>
-            <p className="about-hero-lead">
+            <p className="ed-hero-lead">
               An entrepreneurial community at PES University where curious minds come together to
               explore ideas, experiment fearlessly, and turn ambition into action.
             </p>
 
-            <div className="about-actions">
-              <Link href="/join" className="about-btn-primary">
-                Join the club <span className="about-btn-arrow" aria-hidden="true">→</span>
+            <div className="ed-actions">
+              <Link href="/join" className="btn-pill-primary">
+                Join the club <span className="btn-arrow" aria-hidden="true">→</span>
               </Link>
-              <Link href="/events" className="about-btn-secondary">
+              <Link href="/events" className="btn-pill-secondary">
                 Explore events
               </Link>
             </div>
 
-            <div className="about-hero-meta">
-              <div className="about-hero-meta-item">
-                <span className="about-hero-meta-val">0 to 1</span>
-                <span className="about-hero-meta-label">Ideation to execution</span>
+            <div className="ed-meta-row">
+              <div className="ed-meta-item">
+                <span className="ed-meta-val">0 to 1</span>
+                <span className="ed-meta-label">Ideation to execution</span>
               </div>
-              <div className="about-hero-meta-item">
-                <span className="about-hero-meta-val">6 Domains</span>
-                <span className="about-hero-meta-label">Find where you fit</span>
+              <div className="ed-meta-item">
+                <span className="ed-meta-val">6 Domains</span>
+                <span className="ed-meta-label">Find where you fit</span>
               </div>
-              <div className="about-hero-meta-item">
-                <span className="about-hero-meta-val">PESU EC</span>
-                <span className="about-hero-meta-label">Electronic City Campus</span>
+              <div className="ed-meta-item">
+                <span className="ed-meta-val">PESU EC</span>
+                <span className="ed-meta-label">Electronic City Campus</span>
               </div>
             </div>
           </div>
 
-          <KineticCore />
+          <DeferredVisual kind="core" />
         </div>
-
       </section>
 
       {/* SECTION 2: WHO WE ARE */}
-      <section className="about-container about-section" aria-labelledby="who-we-are-heading">
+      <section className="container ed-section" aria-labelledby="who-we-are-heading">
         <div className="about-profile-grid">
           <aside>
-            <span className="about-eyebrow">Club profile</span>
-            <h2 id="who-we-are-heading" className="about-section-title">
-              Not just ideas. Initiative.
+            <div className="modern-kicker">
+              <span className="modern-kicker-idx">01</span>
+              <span className="modern-kicker-rule" aria-hidden="true" />
+              <span>Club profile</span>
+            </div>
+            <h2 id="who-we-are-heading" className="ed-section-title about-heading-gap">
+              Not just ideas. <span className="modern-title-dim">Initiative.</span>
             </h2>
 
             <dl className="about-facts-list">
@@ -96,7 +101,7 @@ export default function AboutPage() {
               </div>
               <div className="about-fact-item">
                 <dt className="about-fact-dt">Focus area</dt>
-                <dd className="about-fact-dd">0-to-1 ideation & rapid execution</dd>
+                <dd className="about-fact-dd">0-to-1 ideation &amp; rapid execution</dd>
               </div>
               <div className="about-fact-item">
                 <dt className="about-fact-dt">Motto</dt>
@@ -145,11 +150,15 @@ export default function AboutPage() {
       </section>
 
       {/* SECTION 3: OUR PHILOSOPHY */}
-      <section className="about-container about-section" aria-labelledby="philosophy-heading">
+      <section className="container ed-section" aria-labelledby="philosophy-heading">
         <header className="about-section-header">
-          <span className="about-eyebrow">Core mindset</span>
-          <h2 id="philosophy-heading" className="about-section-title">
-            Our Philosophy
+          <div className="modern-kicker">
+            <span className="modern-kicker-idx">02</span>
+            <span className="modern-kicker-rule" aria-hidden="true" />
+            <span>Core mindset</span>
+          </div>
+          <h2 id="philosophy-heading" className="ed-section-title about-heading-gap">
+            Our philosophy <span className="modern-title-dim">in practice.</span>
           </h2>
           <p className="about-section-sub">
             Three guiding commitments that anchor our discussions, our collaborative culture, and
@@ -168,11 +177,15 @@ export default function AboutPage() {
       </section>
 
       {/* SECTION 4: OUR DOMAINS */}
-      <section className="about-container about-section" aria-labelledby="domains-heading">
+      <section className="container ed-section" aria-labelledby="domains-heading">
         <header className="about-section-header">
-          <span className="about-eyebrow">Domains</span>
-          <h2 id="domains-heading" className="about-section-title">
-            Find where you fit.
+          <div className="modern-kicker">
+            <span className="modern-kicker-idx">03</span>
+            <span className="modern-kicker-rule" aria-hidden="true" />
+            <span>Six domains</span>
+          </div>
+          <h2 id="domains-heading" className="ed-section-title about-heading-gap">
+            Find where <span className="modern-title-dim">you fit.</span>
           </h2>
           <p className="about-section-sub">
             Pick the domain that matches what you want to build and learn.
@@ -194,7 +207,7 @@ export default function AboutPage() {
               alt="E-Club PESU official mark"
               width="36"
               height="36"
-              className="about-manifesto-logo"
+              className="logo-badge-consistent"
             />
             <div>
               <span className="about-manifesto-name">{SITE.name}</span>
@@ -208,20 +221,24 @@ export default function AboutPage() {
       </section>
 
       {/* SECTION 5: FINAL CALL TO ACTION */}
-      <section className="about-container about-cta-section" aria-labelledby="cta-heading">
-        <div className="about-cta-content">
-          <span className="about-eyebrow">Get involved</span>
-          <h2 id="cta-heading" className="about-cta-title">
-            Your next idea starts somewhere.
+      <section className="container ed-cta-section" aria-labelledby="cta-heading">
+        <div className="ed-cta-inner">
+          <div className="modern-kicker">
+            <span className="modern-kicker-idx">04</span>
+            <span className="modern-kicker-rule" aria-hidden="true" />
+            <span>Get involved</span>
+          </div>
+          <h2 id="cta-heading" className="ed-cta-title">
+            Your next idea <span className="modern-title-dim">starts somewhere.</span>
           </h2>
-          <p className="about-cta-lead">
+          <p className="ed-cta-lead">
             Bring your curiosity. Find your people. Start building.
           </p>
-          <div className="about-actions">
-            <Link href="/join" className="about-btn-primary">
-              Apply to join E-Club <span className="about-btn-arrow" aria-hidden="true">→</span>
+          <div className="ed-actions">
+            <Link href="/join" className="btn-pill-primary">
+              Apply to join E-Club <span className="btn-arrow" aria-hidden="true">→</span>
             </Link>
-            <Link href="/events" className="about-btn-secondary">
+            <Link href="/events" className="btn-pill-secondary">
               Browse upcoming events
             </Link>
           </div>

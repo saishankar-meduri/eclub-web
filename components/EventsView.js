@@ -9,24 +9,46 @@ export default async function EventsView({ past = false }) {
     : await getEvents({ statuses: ['live', 'upcoming'] });
 
   return (
-    <>
+    <div className="page-shell">
       <EventMarquee events={events} />
-      <div className="container section">
-        <h1>Events</h1>
-        <div className="tabs" role="navigation" aria-label="Event filter">
-          <Link href="/events" className="tab" aria-current={!past ? 'page' : undefined}>Upcoming</Link>
-          <Link href="/events/past" className="tab" aria-current={past ? 'page' : undefined}>Past</Link>
-        </div>
+
+      <section className="container ed-page-section">
+        <header className="modern-page-header events-header-clean">
+          <div className="modern-kicker">
+            <span className="modern-kicker-idx">01</span>
+            <span className="modern-kicker-rule" aria-hidden="true" />
+            <span>Club Calendar</span>
+          </div>
+          <h1 className="events-dual-heading">
+            <Link
+              href="/events"
+              className="events-heading-link"
+              aria-current={!past ? 'page' : undefined}
+            >
+              Upcoming events
+            </Link>
+            <Link
+              href="/events/past"
+              className="events-heading-link"
+              aria-current={past ? 'page' : undefined}
+            >
+              Past events
+            </Link>
+          </h1>
+        </header>
+
         {events.length ? (
           <div className="grid">
-            {events.map((e) => <EventCard key={e.id} event={e} />)}
+            {events.map((e) => (
+              <EventCard key={e.id} event={e} />
+            ))}
           </div>
         ) : (
-          <p className="muted">
-            {past ? 'No past events to show yet.' : 'No upcoming events right now. Check back soon.'}
+          <p className="events-empty-text">
+            {past ? 'No past events' : 'No upcoming events'}
           </p>
         )}
-      </div>
-    </>
+      </section>
+    </div>
   );
 }
