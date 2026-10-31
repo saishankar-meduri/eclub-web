@@ -1,19 +1,27 @@
 :root {
-  --bg: #000;
-  --fg: #fff;
-  --muted: #a0a0a0;
-  --line: #2a2a2a;
-  --radius: 12px;
-  --max: 1080px;
-  --btn-hover: #d6d6d6;
-}
+     --bg: #000;
+     --fg: #fff;
+     --muted: #a0a0a0;
+     --line: #2a2a2a;
+     --radius: 12px;
+     --max: 1080px;
+     --btn-hover: #d6d6d6;
+     --surface: #141418;
+     --surface-hover: #19191f;
+     --surface-subtle: #101014;
+     --line-subtle: #1c1c20;
+   }
 
 :root[data-theme='light'] {
-  --bg: #fff;
-  --fg: #000;
-  --muted: #5c5c5c;
-  --line: #dcdcdc;
-  --btn-hover: #2e2e2e;
+     --bg: #fff;
+     --fg: #000;
+     --muted: #5c5c5c;
+     --line: #dcdcdc;
+     --btn-hover: #2e2e2e;
+     --surface: #ffffff;
+     --surface-hover: #f9fafb;
+     --surface-subtle: #f3f4f6;
+     --line-subtle: #f3f4f6;
 }
 :root[data-theme='light'] { color-scheme: light; }
 :root[data-theme='light'] img[src='/logo.jpg'] { filter: invert(1); }
@@ -156,10 +164,585 @@ p { max-width: 65ch; }
 .post time { color: var(--muted); font-size: 0.9rem; }
 .post h2, .post h3 { margin-top: 4px; }
 
-/* About */
-.about { min-height: 55vh; display: flex; align-items: center; justify-content: center; text-align: center; }
-.about h1 { font-size: clamp(2.4rem, 9vw, 6rem); }
+/* ==========================================================================
+   About Page — Refined Minimal Editorial
+   ========================================================================== */
+
 .prose p { margin-top: 16px; }
+.about-page {
+  display: flex;
+  flex-direction: column;
+  animation: aboutFadeRise 450ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes aboutFadeRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Shared container & vertical rhythm */
+.about-container {
+  width: 100%;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.about-section {
+  padding-top: 130px;
+  padding-bottom: 130px;
+  border-top: 1px solid var(--line);
+}
+
+.about-section-header {
+  margin-bottom: 56px;
+  max-width: 68ch;
+}
+
+/* Typography scale: 2 weights (400, 600), loosened tracking */
+.about-eyebrow {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+  margin-bottom: 14px;
+}
+
+.about-hero-title {
+  font-size: clamp(2.5rem, 5.2vw, 4.2rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  margin-bottom: 24px;
+  max-width: 18ch;
+}
+
+.about-hero-lead {
+  font-size: 1.125rem;
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--muted);
+  max-width: 58ch;
+  margin-bottom: 36px;
+}
+
+.about-section-title {
+  font-size: clamp(1.85rem, 3.2vw, 2.35rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  margin-bottom: 14px;
+}
+
+.about-section-sub {
+  font-size: 1.05rem;
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--muted);
+  max-width: 62ch;
+}
+
+.about-prose {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--muted);
+  max-width: 62ch;
+}
+
+/* Consistent pill buttons */
+.about-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.about-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 26px;
+  border-radius: 999px;
+  border: 1px solid var(--fg);
+  background: var(--fg);
+  color: var(--bg);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-align: center;
+  transition: opacity 0.15s ease;
+}
+
+.about-btn-primary:hover {
+  opacity: 0.9;
+}
+
+.about-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 26px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--fg);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-align: center;
+  transition: border-color 0.15s ease;
+}
+
+.about-btn-secondary:hover {
+  border-color: var(--fg);
+}
+
+.about-btn-arrow {
+  margin-left: 6px;
+}
+
+/* --------------------------------------------------------------------------
+   Section 1: Hero & Spatial 3D Hook
+   -------------------------------------------------------------------------- */
+.about-hero {
+  padding-top: 80px;
+  padding-bottom: 90px;
+}
+
+.about-hero-grid {
+  display: grid;
+  gap: 48px;
+  align-items: center;
+}
+
+@media (min-width: 900px) {
+  .about-hero-grid {
+    grid-template-columns: 1.15fr 0.95fr;
+    min-height: 520px;
+  }
+}
+
+.about-kinetic-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-width: 440px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.about-kinetic-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.about-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  margin-top: 36px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.about-hero-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.about-hero-meta-val {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.about-hero-meta-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.about-hero-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  margin-top: 80px;
+  padding-top: 40px;
+  border-top: 1px solid var(--line);
+}
+
+.about-hero-step {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.about-hero-step-label {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.about-hero-step-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.about-hero-step-desc {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+/* --------------------------------------------------------------------------
+   Section 2: Who We Are — Open Editorial Layout
+   -------------------------------------------------------------------------- */
+.about-profile-grid {
+  display: grid;
+  gap: 64px;
+}
+
+@media (min-width: 900px) {
+  .about-profile-grid {
+    grid-template-columns: 280px 1fr;
+    gap: 72px;
+  }
+}
+
+.about-facts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.about-fact-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.about-fact-dt {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.about-fact-dd {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.about-statement {
+  font-size: clamp(1.2rem, 2.2vw, 1.45rem);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--fg);
+  margin-bottom: 24px;
+  max-width: 60ch;
+}
+
+.about-triad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+  margin-top: 48px;
+  padding-top: 36px;
+  border-top: 1px solid var(--line);
+}
+
+.about-triad-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.about-triad-item h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.about-triad-item p {
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Section 3: Our Philosophy — Open Columns, No Boxes
+   -------------------------------------------------------------------------- */
+.about-philosophy-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+}
+
+.about-philosophy-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.about-philosophy-col h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.01em;
+}
+
+.about-philosophy-lead {
+  font-size: 0.95rem;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Section 4: The Entrepreneurial Journey — 4 Phases & Outputs
+   -------------------------------------------------------------------------- */
+.about-journey-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 28px;
+}
+
+.about-journey-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.about-journey-step-num {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.about-journey-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.01em;
+}
+
+.about-journey-summary {
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--muted);
+  flex-grow: 1;
+}
+
+.about-journey-output {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 0.8125rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.about-journey-output-val {
+  display: block;
+  font-weight: 600;
+  color: var(--fg);
+  margin-top: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Section 5: The Community — Open Tracks & Quiet Manifesto
+   -------------------------------------------------------------------------- */
+.about-tracks-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 28px;
+  margin-bottom: 72px;
+}
+
+.about-track-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.about-track-col h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.about-track-col p {
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.about-manifesto {
+  padding-top: 56px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.about-manifesto-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.about-manifesto-logo {
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.about-manifesto-name {
+  display: block;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--fg);
+}
+
+.about-manifesto-campus {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.about-manifesto-quote {
+  font-size: clamp(1.2rem, 2.2vw, 1.45rem);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--fg);
+  max-width: 58ch;
+  margin: 0;
+}
+
+.about-manifesto-meta {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Section 6: Final Call to Action
+   -------------------------------------------------------------------------- */
+.about-cta-section {
+  padding-top: 130px;
+  padding-bottom: 140px;
+  border-top: 1px solid var(--line);
+}
+
+.about-cta-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.about-cta-title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  margin-bottom: 14px;
+  max-width: 20ch;
+}
+
+.about-cta-lead {
+  font-size: 1.125rem;
+  font-weight: 400;
+  color: var(--muted);
+  max-width: 50ch;
+  margin-bottom: 32px;
+  line-height: 1.6;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive & Accessibility Nuances
+   -------------------------------------------------------------------------- */
+@media (max-width: 899px) {
+  .about-hero-steps {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .about-triad-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .about-philosophy-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .about-journey-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+  }
+  .about-tracks-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+  }
+}
+
+@media (max-width: 639px) {
+  .about-section {
+    padding-top: 80px;
+    padding-bottom: 80px;
+  }
+  .about-hero {
+    padding-top: 60px;
+    padding-bottom: 60px;
+  }
+  .about-cta-section {
+    padding-top: 80px;
+    padding-bottom: 90px;
+  }
+  .about-journey-grid {
+    grid-template-columns: 1fr;
+  }
+  .about-tracks-grid {
+    grid-template-columns: 1fr;
+  }
+  .about-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .about-actions .about-btn-primary,
+  .about-actions .about-btn-secondary {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .about-page {
+    animation: none !important;
+  }
+}
 
 /* Footer */
 .footer { border-top: 1px solid var(--line); margin-top: 48px; padding: 32px 0; }
