@@ -39,7 +39,14 @@ export default function Applicants({ domainId, auth }) {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${await auth.token()}` },
       body: JSON.stringify({ ids, status: newStatus }),
     });
-    setMsg(r.ok ? `Updated ${ids.length}` : "Failed");
+    const j = r.ok ? await r.json().catch(() => ({})) : {};
+    setMsg(
+      !r.ok
+        ? "Failed"
+        : j.emailFailed?.length
+        ? `Updated ${ids.length}. ${j.emailFailed.length} email(s) failed to send; those applicants can still see their status at /status.`
+        : `Updated ${ids.length}`
+    );
     setBusy(false);
     setOpen(null);
     load();

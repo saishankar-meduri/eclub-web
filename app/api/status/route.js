@@ -1,23 +1,23 @@
 import { adminDb } from "../../../lib/firebaseAdmin";
 
 // Public status lookup. Server-side only: applications are never publicly readable.
-const hits = new Map(); // naive per-IP limiter (per instance); use Upstash/Vercel KV for real limits
-function limited(ip) {
-  const now = Date.now();
-  const arr = (hits.get(ip) || []).filter((t) => now - t < 60_000);
-  arr.push(now);
-  hits.set(ip, arr);
-  return arr.length > 10;
-}
+import { rateLimit, clientIp } from "../../../lib/rateLimit.server";
 
 export async function POST(req) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "anon";
-  if (limited(ip)) return Response.json({ error: "Too many requests" }, { status: 429 });
+  // 10 lookups/min per IP
+  const ipRl = await rateLimit(`status:ip:${clientIp(req)}`, 10, 60);
+  if (!ipRl.ok)
+    return Response.json({ error: "Too many requests. Try again in a minute." }, { status: 429, headers: { "Retry-After": String(ipRl.retryAfter) } });
 
   const body = await req.json().catch(() => ({}));
   const srn = String(body.srn || "").trim().toUpperCase();
   const email = String(body.email || "").trim().toLowerCase();
   if (!srn || !email) return Response.json({ error: "SRN and email required" }, { status: 400 });
+
+  // 30 lookups/hour per SRN across all IPs: slows down enumeration from rotating IPs
+  const srnRl = await rateLimit(`status:srn:${srn}`, 30, 3600);
+  if (!srnRl.ok)
+    return Response.json({ error: "Too many requests. Try again later." }, { status: 429, headers: { "Retry-After": String(srnRl.retryAfter) } });
 
   const snap = await adminDb().collection("applications").where("srn", "==", srn).get();
   const mine = snap.docs.map((d) => d.data()).filter((a) => String(a.email).toLowerCase() === email);

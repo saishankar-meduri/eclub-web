@@ -3,6 +3,8 @@ import { adminDb } from "../../../../../lib/firebaseAdmin";
 import { requireRole, errorResponse } from "../../../../../lib/serverAuth";
 import { sendShortlistEmail } from "../../../../../lib/sendShortlistEmail.server";
 
+export const maxDuration = 60; // bulk shortlists send many emails
+
 // POST { ids: string[], status: "shortlisted" | "rejected" | "applied" }
 export async function POST(req) {
   try {
@@ -35,11 +37,29 @@ export async function POST(req) {
     }
     await batch.commit();
 
-    // Stub for now (no-op). Failures must never block shortlisting.
-    for (const a of toEmail) {
-      try { await sendShortlistEmail(a); } catch (e) { console.error("sendShortlistEmail failed", a.id, e); }
+    // Emails go out after the status is saved. A failed email must never undo or block shortlisting.
+    let emailed = 0;
+    const emailFailed = [];
+    if (toEmail.length) {
+      const doms = new Map();
+      for (const id of new Set(toEmail.map((a) => a.domainId))) {
+        doms.set(id, (await adminDb().doc(`domains/${id}`).get()).data()?.name);
+      }
+      const queue = [...toEmail];
+      const worker = async () => {
+        for (let a; (a = queue.shift()); ) {
+          try {
+            const r = await sendShortlistEmail({ ...a, domainName: doms.get(a.domainId) });
+            if (r.sent) emailed++;
+          } catch (e) {
+            console.error("sendShortlistEmail failed", a.id, e.message);
+            emailFailed.push(a.id);
+          }
+        }
+      };
+      await Promise.all([worker(), worker(), worker()]);
     }
-    return Response.json({ ok: true, updated: toEmail.length });
+    return Response.json({ ok: true, updated: toEmail.length, emailed, emailFailed });
   } catch (e) {
     return errorResponse(e);
   }
