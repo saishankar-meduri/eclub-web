@@ -2430,3 +2430,6 @@ p {
     animation: none;
   }
 }
+
+.brand-logo { border-radius: 6px; flex: none; margin-right: 12px; }
+.brand { margin-left: clamp(0px, 2vw, 28px); }

@@ -49,6 +49,7 @@ export default function Navbar() {
     <header ref={headerRef} className="nav">
       <div className="nav-wide">
         <Link href="/" className="brand">
+	<img src="/logo.jpg" alt="" width="32" height="32" className="brand-logo" />
           <span className="brand-name">{SITE.name}</span>
         </Link>
 

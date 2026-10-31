@@ -8,7 +8,7 @@ export async function GET(req) {
 
     const decoded = await adminAuth().verifyIdToken(token);
     const email = (decoded.email || "").trim().toLowerCase();
-    if (!email) return Response.json({ tier: "normal" });
+    if (!email || !decoded.email_verified) return Response.json({ tier: "normal" });
 
     // 1. Check admin / explicit user role in users/{email}
     const userSnap = await adminDb().doc(`users/${email}`).get();
