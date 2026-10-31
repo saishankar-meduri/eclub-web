@@ -8,24 +8,6 @@ export const metadata = {
     'E-Club PESU is an entrepreneurial community at PES University Electronic City Campus where students explore problems, experiment fearlessly, and build what comes next.',
 };
 
-const HERO_STEPS = [
-  {
-    step: 'Phase 1',
-    title: 'Problem Discovery',
-    desc: 'Observe frictions in campus life and identify unmet user demand.',
-  },
-  {
-    step: 'Phase 2',
-    title: 'Rapid Prototype',
-    desc: 'Build testable artifacts through disciplined, iterative sprint cycles.',
-  },
-  {
-    step: 'Phase 3',
-    title: 'Community Synthesis & Launch',
-    desc: 'Validate through peer critique, real-world feedback, and active adoption.',
-  },
-];
-
 const PHILOSOPHIES = [
   {
     title: 'Think differently',
@@ -41,54 +23,13 @@ const PHILOSOPHIES = [
   },
 ];
 
-const JOURNEY_STEPS = [
-  {
-    num: '01',
-    name: 'Discover',
-    summary: 'Identify problems worth solving.',
-    outputLabel: 'Output',
-    outputVal: 'Problem statement & opportunity space',
-  },
-  {
-    num: '02',
-    name: 'Explore',
-    summary: 'Research opportunities & challenge assumptions.',
-    outputLabel: 'Output',
-    outputVal: 'User insights & core hypothesis',
-  },
-  {
-    num: '03',
-    name: 'Experiment',
-    summary: 'Test concepts, build prototypes, and learn.',
-    outputLabel: 'Output',
-    outputVal: 'Working prototype & feedback loop',
-  },
-  {
-    num: '04',
-    name: 'Launch',
-    summary: 'Take ideas forward & create something tangible.',
-    outputLabel: 'Output',
-    outputVal: 'Live product & initial adoption',
-  },
-];
-
-const TRACKS = [
-  {
-    title: 'Engineers & Builders',
-    desc: 'Full-stack hackers, systems thinkers, and hardware tinkerers turning architecture blueprints and algorithms into functional, resilient realities.',
-  },
-  {
-    title: 'Designers & Storytellers',
-    desc: 'Product designers and visual creators giving ideas clarity, visceral aesthetic form, high usability, and strong brand presence.',
-  },
-  {
-    title: 'Operators & Strategists',
-    desc: 'Analytical minds orchestrating product roadmaps, go-to-market strategies, unit economics, and campus partnerships.',
-  },
-  {
-    title: 'Domain Explorers',
-    desc: 'Curious minds from biotech, economics, media, and mathematics bringing unique domain insights to spot uncharted venture opportunities.',
-  },
+const DOMAINS = [
+  'Design',
+  'Events',
+  'Finance and Operations',
+  'Social Media and Marketing',
+  'Startup & Innovation',
+  'Tech',
 ];
 
 export default function AboutPage() {
@@ -124,8 +65,8 @@ export default function AboutPage() {
                 <span className="about-hero-meta-label">Ideation to execution</span>
               </div>
               <div className="about-hero-meta-item">
-                <span className="about-hero-meta-val">4 Tracks</span>
-                <span className="about-hero-meta-label">Tech · Design · Ops · Domain</span>
+                <span className="about-hero-meta-val">6 Domains</span>
+                <span className="about-hero-meta-label">Find where you fit</span>
               </div>
               <div className="about-hero-meta-item">
                 <span className="about-hero-meta-val">PESU EC</span>
@@ -137,16 +78,6 @@ export default function AboutPage() {
           <KineticCore />
         </div>
 
-        {/* Calm 3-step sequence with hairline dividers */}
-        <div className="about-hero-steps" aria-label="Core progression">
-          {HERO_STEPS.map((s) => (
-            <div key={s.title} className="about-hero-step">
-              <span className="about-hero-step-label">{s.step}</span>
-              <h2 className="about-hero-step-title">{s.title}</h2>
-              <p className="about-hero-step-desc">{s.desc}</p>
-            </div>
-          ))}
-        </div>
       </section>
 
       {/* SECTION 2: WHO WE ARE */}
@@ -162,10 +93,6 @@ export default function AboutPage() {
               <div className="about-fact-item">
                 <dt className="about-fact-dt">Campus base</dt>
                 <dd className="about-fact-dd">PES University, EC Campus</dd>
-              </div>
-              <div className="about-fact-item">
-                <dt className="about-fact-dt">Character</dt>
-                <dd className="about-fact-dd">Student-led builder collective</dd>
               </div>
               <div className="about-fact-item">
                 <dt className="about-fact-dt">Focus area</dt>
@@ -240,52 +167,22 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* SECTION 4: THE ENTREPRENEURIAL JOURNEY */}
-      <section className="about-container about-section" aria-labelledby="journey-heading">
+      {/* SECTION 4: OUR DOMAINS */}
+      <section className="about-container about-section" aria-labelledby="domains-heading">
         <header className="about-section-header">
-          <span className="about-eyebrow">The trajectory</span>
-          <h2 id="journey-heading" className="about-section-title">
-            The Entrepreneurial Journey
+          <span className="about-eyebrow">Domains</span>
+          <h2 id="domains-heading" className="about-section-title">
+            Find where you fit.
           </h2>
           <p className="about-section-sub">
-            The progression from an unrefined spark to a resilient reality. A framework for
-            iterating through ambiguity and turning speculative concepts into validated execution.
-          </p>
-        </header>
-
-        <div className="about-journey-grid">
-          {JOURNEY_STEPS.map((s) => (
-            <div key={s.name} className="about-journey-col">
-              <span className="about-journey-step-num">{s.num}</span>
-              <h3 className="about-journey-title">{s.name}</h3>
-              <p className="about-journey-summary">{s.summary}</p>
-              <div className="about-journey-output">
-                <span>{s.outputLabel}</span>
-                <span className="about-journey-output-val">{s.outputVal}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* SECTION 5: THE COMMUNITY */}
-      <section className="about-container about-section" aria-labelledby="community-heading">
-        <header className="about-section-header">
-          <span className="about-eyebrow">Community</span>
-          <h2 id="community-heading" className="about-section-title">
-            Better ideas happen together.
-          </h2>
-          <p className="about-section-sub">
-            Entrepreneurship is rarely a solo endeavor. Genuine breakthroughs happen when diverse
-            disciplines converge around a shared obsession to solve meaningful problems.
+            Pick the domain that matches what you want to build and learn.
           </p>
         </header>
 
         <div className="about-tracks-grid">
-          {TRACKS.map((t) => (
-            <div key={t.title} className="about-track-col">
-              <h3>{t.title}</h3>
-              <p>{t.desc}</p>
+          {DOMAINS.map((d) => (
+            <div key={d} className="about-track-col">
+              <h3>{d}</h3>
             </div>
           ))}
         </div>
@@ -307,13 +204,10 @@ export default function AboutPage() {
           <blockquote className="about-manifesto-quote">
             “{SITE.tagline}”
           </blockquote>
-          <p className="about-manifesto-meta">
-            Official campus charter · Open to all academic disciplines · Bengaluru, India
-          </p>
         </div>
       </section>
 
-      {/* SECTION 6: FINAL CALL TO ACTION */}
+      {/* SECTION 5: FINAL CALL TO ACTION */}
       <section className="about-container about-cta-section" aria-labelledby="cta-heading">
         <div className="about-cta-content">
           <span className="about-eyebrow">Get involved</span>

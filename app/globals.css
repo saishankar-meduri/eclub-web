@@ -1,27 +1,27 @@
 :root {
-  --bg: #0c0c0e;
-  --fg: #f4f4f5;
-  --muted: #a1a1aa;
-  --line: #222227;
-  --radius: 12px;
-  --max: 1140px;
-  --btn-hover: #e4e4e7;
-  --surface: #141418;
-  --surface-hover: #19191f;
-  --surface-subtle: #101014;
-  --line-subtle: #1c1c20;
-}
+     --bg: #000;
+     --fg: #fff;
+     --muted: #a0a0a0;
+     --line: #2a2a2a;
+     --radius: 12px;
+     --max: 1080px;
+     --btn-hover: #d6d6d6;
+     --surface: #141418;
+     --surface-hover: #19191f;
+     --surface-subtle: #101014;
+     --line-subtle: #1c1c20;
+   }
 
 :root[data-theme='light'] {
-  --bg: #fafafa;
-  --fg: #111827;
-  --muted: #6b7280;
-  --line: #e5e7eb;
-  --btn-hover: #1f2937;
-  --surface: #ffffff;
-  --surface-hover: #f9fafb;
-  --surface-subtle: #f3f4f6;
-  --line-subtle: #f3f4f6;
+     --bg: #fff;
+     --fg: #000;
+     --muted: #5c5c5c;
+     --line: #dcdcdc;
+     --btn-hover: #2e2e2e;
+     --surface: #ffffff;
+     --surface-hover: #f9fafb;
+     --surface-subtle: #f3f4f6;
+     --line-subtle: #f3f4f6;
 }
 :root[data-theme='light'] { color-scheme: light; }
 :root[data-theme='light'] img[src='/logo.jpg'] { filter: invert(1); }
@@ -167,6 +167,8 @@ p { max-width: 65ch; }
 /* ==========================================================================
    About Page — Refined Minimal Editorial
    ========================================================================== */
+
+.prose p { margin-top: 16px; }
 .about-page {
   display: flex;
   flex-direction: column;
