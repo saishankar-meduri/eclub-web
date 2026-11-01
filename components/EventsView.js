@@ -1,12 +1,11 @@
-import Link from 'next/link';
 import EventCard from './EventCard';
 import EventMarquee from './EventMarquee';
 import { getEvents } from '../lib/data';
 
-export default async function EventsView({ past = false }) {
-  const events = past
-    ? await getEvents({ statuses: ['past'], ascending: false })
-    : await getEvents({ statuses: ['live', 'upcoming'] });
+// One horizontal scroll of every event, oldest to newest. The badge on each card
+// (Upcoming / Live / Past) still tells the status, so no split into two pages.
+export default async function EventsView() {
+  const events = await getEvents({ statuses: ['live', 'upcoming', 'past'] });
 
   return (
     <div className="page-shell">
@@ -19,34 +18,19 @@ export default async function EventsView({ past = false }) {
             <span className="modern-kicker-rule" aria-hidden="true" />
             <span>Club Calendar</span>
           </div>
-          <h1 className="events-dual-heading">
-            <Link
-              href="/events"
-              className="events-heading-link"
-              aria-current={!past ? 'page' : undefined}
-            >
-              Upcoming events
-            </Link>
-            <Link
-              href="/events/past"
-              className="events-heading-link"
-              aria-current={past ? 'page' : undefined}
-            >
-              Past events
-            </Link>
-          </h1>
+          <h1 className="events-dual-heading">Events</h1>
         </header>
 
         {events.length ? (
-          <div className="grid">
+          <div className="events-scroll" role="list" tabIndex={0} aria-label="All events, sorted by date">
             {events.map((e) => (
-              <EventCard key={e.id} event={e} />
+              <div key={e.id} role="listitem" className="events-scroll-item">
+                <EventCard event={e} />
+              </div>
             ))}
           </div>
         ) : (
-          <p className="events-empty-text">
-            {past ? 'No past events' : 'No upcoming events'}
-          </p>
+          <p className="events-empty-text">No events yet</p>
         )}
       </section>
     </div>

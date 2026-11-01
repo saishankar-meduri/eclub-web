@@ -1,8 +1,6 @@
-import EventsView from '../../../components/EventsView';
+import { redirect } from 'next/navigation';
 
-export const revalidate = 60;
-export const metadata = { title: 'Past events' };
-
+// Past events now live in the single scroll on /events; keep old links working.
 export default function PastEventsPage() {
-  return <EventsView past />;
+  redirect('/events');
 }

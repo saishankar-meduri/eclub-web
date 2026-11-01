@@ -45,6 +45,8 @@ export default function Applicants({ domainId, auth }) {
         ? "Failed"
         : j.emailFailed?.length
         ? `Updated ${ids.length}. ${j.emailFailed.length} email(s) failed to send; those applicants can still see their status at /status.`
+        : j.skipped
+        ? `Updated ${ids.length - j.skipped}. Skipped ${j.skipped} (not allowed from their current status).`
         : `Updated ${ids.length}`
     );
     setBusy(false);
@@ -53,6 +55,9 @@ export default function Applicants({ domainId, auth }) {
   }
 
   const toggle = (id) => { const n = new Set(sel); n.has(id) ? n.delete(id) : n.add(id); setSel(n); };
+  const chosen = apps.filter((a) => sel.has(a.id));
+  const canReject = chosen.length > 0 && chosen.every((a) => a.status === "applied");
+  const canSelect = chosen.length > 0 && chosen.every((a) => a.status === "shortlisted");
   const allOn = shown.length > 0 && shown.every((a) => sel.has(a.id));
 
   return (
@@ -63,11 +68,13 @@ export default function Applicants({ domainId, auth }) {
           <option value="all">All statuses</option>
           <option value="applied">Applied</option>
           <option value="shortlisted">Shortlisted</option>
+          <option value="selected">Selected</option>
           <option value="rejected">Rejected</option>
         </select>
       </div>
       <button className="rc-btn" disabled={busy || !sel.size} onClick={() => act([...sel], "shortlisted")}>Shortlist selected ({sel.size})</button>
-      <button className="rc-btn ghost" disabled={busy || !sel.size} onClick={() => act([...sel], "rejected")}>Reject selected</button>
+      <button className="rc-btn" disabled={busy || !canSelect} title="Only for shortlisted applicants" onClick={() => act([...sel], "selected")}>Mark selected as Selected</button>
+      <button className="rc-btn ghost" disabled={busy || !canReject} title="Only for applicants who aren't shortlisted yet" onClick={() => act([...sel], "rejected")}>Reject selected</button>
       {msg && <span className="rc-muted">{msg}</span>}
 
       <table>
@@ -100,8 +107,15 @@ export default function Applicants({ domainId, auth }) {
               <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{v}</p>
             </div>
           ))}
-          <button className="rc-btn" disabled={busy} onClick={() => act([open.id], "shortlisted")}>Shortlist</button>
-          <button className="rc-btn ghost" disabled={busy} onClick={() => act([open.id], "rejected")}>Reject</button>
+          {(open.status === "applied" || open.status === "rejected") && (
+            <button className="rc-btn" disabled={busy} onClick={() => act([open.id], "shortlisted")}>Shortlist</button>
+          )}
+          {open.status === "shortlisted" && (
+            <button className="rc-btn" disabled={busy} onClick={() => act([open.id], "selected")}>Selected</button>
+          )}
+          {open.status === "applied" && (
+            <button className="rc-btn ghost" disabled={busy} onClick={() => act([open.id], "rejected")}>Reject</button>
+          )}
           <button className="rc-btn ghost" onClick={() => setOpen(null)}>Close</button>
         </div>
       )}

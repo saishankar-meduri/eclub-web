@@ -23,7 +23,7 @@ export default function EventCard({ event }) {
         <h3 className="card-title">{event.title}</h3>
         {event.venue && <p className="card-venue">{event.venue}</p>}
         <div className="card-footer">
-          <span className="card-fee">{formatFee(event.fee, event.team_size)}</span>
+          <span className="card-fee">{formatFee(event.fee, event)}</span>
           <span className="card-cta" aria-hidden="true">
             Details <span className="btn-arrow">→</span>
           </span>
