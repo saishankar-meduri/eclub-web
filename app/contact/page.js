@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { getContacts } from "../../lib/data";
-import { INITIAL_CONTACTS } from "../../lib/initialContacts";
 import { SITE } from "../../lib/site";
 import ContactCard from "../../components/ContactCard";
 import ContactAdminBar from "../../components/ContactAdminBar";
@@ -23,7 +22,7 @@ async function fetchContacts() {
     try {
       const { adminDb } = await import("../../lib/firebaseAdmin.js");
       const snap = await adminDb().collection("contacts").where("published", "==", true).get();
-      if (!snap.empty) {
+      
         return snap.docs
           .map((d) => {
             const data = d.data();
@@ -40,7 +39,7 @@ async function fetchContacts() {
             if (orderA !== orderB) return orderA - orderB;
             return (a.name || "").localeCompare(b.name || "");
           });
-      }
+      
     } catch {
       // Fall through to client SDK or initial contacts
     }
@@ -55,7 +54,7 @@ async function fetchContacts() {
   }
 
   // 3. Fall back to initial contacts
-  return INITIAL_CONTACTS;
+  return [];
 }
 
 export default async function ContactPage() {

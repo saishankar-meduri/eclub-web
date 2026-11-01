@@ -536,7 +536,7 @@ function ContactsManager({ auth }) {
                 <input
                   id="c-name"
                   required
-                  placeholder="e.g. Krish Gupta"
+                  placeholder="e.g. Jane Doe"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
@@ -602,7 +602,7 @@ function ContactsManager({ auth }) {
                   <input
                     id="c-phone"
                     type="tel"
-                    placeholder="e.g. 9682674911"
+                    placeholder="e.g. 987654321"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   />
