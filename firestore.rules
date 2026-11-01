@@ -43,6 +43,10 @@ service cloud.firestore {
       allow read: if resource.data.published == true;
       allow write: if false;
     }
+    match /contacts/{id} {
+      allow read: if resource.data.published == true || isSuper();
+      allow write: if false;
+    }
 
     // ---------- users (roles) ----------
     match /users/{email} {

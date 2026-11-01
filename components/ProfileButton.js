@@ -211,9 +211,14 @@ export default function ProfileButton() {
                 {isAdmin && (
                   <>
                     {role === 'superadmin' && (
-                      <Link href="/admin/superadmin" onClick={() => setOpen(false)}>
-                        Superadmin console <span aria-hidden="true">→</span>
-                      </Link>
+                      <>
+                        <Link href="/admin/superadmin" onClick={() => setOpen(false)}>
+                          Superadmin console <span aria-hidden="true">→</span>
+                        </Link>
+                        <Link href="/admin/contacts" onClick={() => setOpen(false)}>
+                          Manage Contact Page <span aria-hidden="true">→</span>
+                        </Link>
+                      </>
                     )}
                     <Link href="/admin/recruitment" onClick={() => setOpen(false)}>
                       Recruitment panel <span aria-hidden="true">→</span>

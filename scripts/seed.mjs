@@ -2,6 +2,7 @@
 // Uses your web config from .env.local. Needs rules that allow writes TEMPORARILY (see README).
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, setDoc, Timestamp } from 'firebase/firestore';
+import { INITIAL_CONTACTS } from '../lib/initialContacts.js';
 
 const app = initializeApp({
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -82,5 +83,13 @@ for (const e of events) {
 for (const { id, ...a } of announcements) {
   await setDoc(doc(db, 'announcements', id), { ...a, created_at: Timestamp.fromDate(new Date(a.created_at)) });
 }
-console.log(`Seeded ${events.length} events and ${announcements.length} announcements.`);
+for (const { id, ...c } of INITIAL_CONTACTS) {
+  await setDoc(doc(db, 'contacts', id), {
+    ...c,
+    category: c.group,
+    created_at: Timestamp.now(),
+    updated_at: Timestamp.now(),
+  }, { merge: true });
+}
+console.log(`Seeded ${events.length} events, ${announcements.length} announcements, and ${INITIAL_CONTACTS.length} contacts.`);
 process.exit(0);

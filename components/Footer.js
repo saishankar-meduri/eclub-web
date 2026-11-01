@@ -30,6 +30,7 @@ export default function Footer() {
               <Link href="/events">Events</Link>
               <Link href="/announcements">Announcements</Link>
               <Link href="/about">About</Link>
+              <Link href="/contact">Contact</Link>
             </div>
 
             <div className="footer-col">
