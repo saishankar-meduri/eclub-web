@@ -129,6 +129,10 @@ export default async function EventPage({ params }) {
 
             {event.status === 'past' ? (
               <span className="btn-pill-disabled">Event ended</span>
+            ) : event.reg_enabled ? (
+              <Link href={`/events/${event.slug}/register`} className="btn-pill-primary btn-full">
+                Register now <span className="btn-arrow" aria-hidden="true">→</span>
+              </Link>
             ) : event.registration_url ? (
               <a
                 href={event.registration_url}
