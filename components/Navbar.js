@@ -63,7 +63,7 @@ export default function Navbar() {
               <Link
                 key={href}
                 href={href}
-                className="nav-pill-link"
+                className={`nav-pill-link${label === 'Join' ? ' nav-pill-cta' : ''}`}
                 aria-current={isActive(href) ? 'page' : undefined}
               >
                 {label}

@@ -2446,3 +2446,27 @@ p {
   .brand-name { font-size: 0.82rem; }
   .nav-toggle { padding: 10px 12px; }
 }
+.dispatch-content summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.dispatch-content summary::-webkit-details-marker { display: none; }
+.dispatch-content summary::after { content: "+"; font-size: 1.5rem; color: var(--muted); flex: none; }
+.dispatch-content[open] summary::after { content: "−"; }
+.dispatch-content .body-text { margin-top: 12px; }
+
+.rc-row > h1 {
+  flex: 1 1 100%;
+  min-width: 0;
+  margin-bottom: 0;
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  overflow-wrap: anywhere;
+}
+.rc-row > .rc-btn { flex: 0 0 auto; margin: 0; }
+.rc-row > .rc-muted { flex: 1 1 100%; }
+
+

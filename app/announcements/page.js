@@ -36,10 +36,12 @@ export default async function AnnouncementsPage() {
                   <span className="dispatch-index">{String(idx + 1).padStart(2, '0')}</span>
                   <time dateTime={a.created_at}>{formatShortDate(a.created_at)}</time>
                 </div>
-                <div className="dispatch-content">
-                  <h2>{a.title}</h2>
-                  <p className="body-text">{a.body}</p>
-                </div>
+                <details className="dispatch-content">
+			<summary>
+    				<h2>{a.title}</h2>
+  			</summary>
+  			<p className="body-text">{a.body}</p>
+		</details>
               </article>
             ))}
           </div>
