@@ -93,9 +93,18 @@ function Panel({ auth }) {
         <h1>Superadmin</h1>
         <a className="rc-btn ghost" href="/admin/events">Manage events</a>
         <a className="rc-btn ghost" href="/admin/announcements">Announcements</a>
+        <a className="rc-btn ghost" href="/admin/contacts">Manage Contact Page</a>
         <button className="rc-btn ghost" onClick={auth.signOut}>Sign out</button>
       </div>
       {msg && <p className="rc-err">{msg}</p>}
+
+      <div className="rc-card">
+        <h3>Contact Page</h3>
+        <p className="rc-muted">
+          Manage Previous Core Team members, Club Coordinator, and any additional contact categories displayed on the public Contact page.
+        </p>
+        <a className="rc-btn" href="/admin/contacts">Manage Contact Page</a>
+      </div>
 
       <div className="rc-card">
         <h3>Domains</h3>
