@@ -5,6 +5,7 @@ import { db } from "../../../lib/firebase";
 import { slugify } from "../../../lib/constants";
 import AdminGate from "../../../components/AdminGate";
 import ImageUploader from "../../../components/events/ImageUploader";
+import EventQuestionsEditor from "../../../components/events/EventQuestionsEditor";
 
 export default function Page() {
   return (
@@ -18,7 +19,8 @@ const pad = (n) => String(n).padStart(2, "0");
 const toInput = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const blank = {
   title: "", slug: "", description: "", schedule: "", rules: "", date: "", venue: "",
-  fee: "0", team_size_min: "1", team_size_max: "1", registration_url: "", status: "upcoming", published: false, images: [],
+  fee: "0", team_size: "1", registration_url: "", status: "upcoming", published: false, images: [],
+  reg_enabled: false, reg_type: "individual", reg_deadline: "",
 };
 
 function Manager({ auth }) {
@@ -42,6 +44,9 @@ function Manager({ auth }) {
       date: toInput(e.date.toDate()), venue: e.venue || "", fee: String(e.fee ?? 0), team_size_min: String(e.team_size_min ?? e.team_size ?? 1), team_size_max: String(e.team_size_max ?? e.team_size ?? 1),
       registration_url: e.registration_url || "", status: e.status, published: !!e.published,
       images: e.images?.length ? e.images : e.banner_url ? [e.banner_url] : [],
+      reg_enabled: !!e.reg_enabled,
+      reg_type: e.reg_type === "team" ? "team" : "individual",
+      reg_deadline: e.reg_deadline ? toInput(e.reg_deadline.toDate()) : "",
     });
   }
 
@@ -57,6 +62,8 @@ function Manager({ auth }) {
     if (tMax < tMin) return setErr("Max team size can't be less than min");
     if (tMax > 20) return setErr("Max team size can't exceed 20");
     if (f.registration_url && !/^https?:\/\/\S+$/i.test(f.registration_url.trim())) return setErr("Registration link must start with http(s)://");
+    if (f.reg_enabled && f.reg_type === "team" && Number(f.team_size) < 2) return setErr("Team events need a team size (max members) of at least 2");
+    if (f.reg_deadline && isNaN(new Date(f.reg_deadline))) return setErr("Check the registration deadline");
     setBusy(true);
     try {
       if (isNew && (await getDoc(doc(db, "events", slug))).exists()) {
@@ -80,6 +87,9 @@ function Manager({ auth }) {
         status: f.status,
         published: f.published,
         images: f.images,
+        reg_enabled: f.reg_enabled,
+        reg_type: f.reg_type,
+        reg_deadline: f.reg_deadline ? Timestamp.fromDate(new Date(f.reg_deadline)) : null,
       });
       setF(null);
       load();
@@ -120,6 +130,7 @@ function Manager({ auth }) {
                   <td>{e.published ? "Yes" : "Draft"}</td>
                   <td style={{ whiteSpace: "nowrap" }}>
                     <button className="rc-btn ghost" onClick={() => edit(e)}>Edit</button>
+                    {e.reg_enabled && <a className="rc-btn ghost" href={`/admin/events/${e.id}/registrations`}>Registrations</a>}
                     <button className="rc-btn ghost" onClick={() => remove(e)}>Delete</button>
                   </td>
                 </tr>
@@ -131,6 +142,7 @@ function Manager({ auth }) {
       )}
 
       {f && (
+        <>
         <div className="rc-card">
           <h3>{isNew ? "New event" : `Edit: ${f.title}`}</h3>
           <label>Title</label>
@@ -160,14 +172,38 @@ function Manager({ auth }) {
           <textarea rows={4} value={f.schedule} onChange={set("schedule")} />
           <label>Rules (one per line)</label>
           <textarea rows={4} value={f.rules} onChange={set("rules")} />
-          <label>Registration link</label>
+          <label>External registration link (optional, used only if on-site registration is off)</label>
           <input value={f.registration_url} placeholder="https://forms.gle/…" onChange={set("registration_url")} />
+          <h3 style={{ marginTop: 20 }}>On-site registration</h3>
+          <label><input type="checkbox" checked={f.reg_enabled} onChange={(e) => setF({ ...f, reg_enabled: e.target.checked })} /> Accept registrations on this site</label>
+          <div className="rc-row">
+            <div>
+              <label>Registration type</label>
+              <select value={f.reg_type} onChange={set("reg_type")}>
+                <option value="individual">Individual</option>
+                <option value="team">Team (team size above = max members incl. leader)</option>
+              </select>
+            </div>
+            <div>
+              <label>Deadline (optional)</label>
+              <input type="datetime-local" value={f.reg_deadline} onChange={set("reg_deadline")} />
+            </div>
+          </div>
+          <p className="rc-muted">Paid events (fee above 0) require a PESU Academy receipt screenshot. Payments are verified under Registrations.</p>
           <ImageUploader images={f.images} onChange={(images) => setF({ ...f, images })} getToken={auth.token} />
           <label><input type="checkbox" checked={f.published} onChange={(e) => setF({ ...f, published: e.target.checked })} /> Published (visible on the site)</label>
           {err && <div className="rc-err">{err}</div>}
           <button className="rc-btn" onClick={save} disabled={busy}>{busy ? "Saving…" : "Save"}</button>
           <button className="rc-btn ghost" onClick={() => setF(null)}>Cancel</button>
         </div>
+        {!isNew && (
+          <div style={{ marginTop: 16 }}>
+            <h3>Registration questions</h3>
+            <p className="rc-muted">Extra questions applicants answer for this event. Changes save instantly.</p>
+            <EventQuestionsEditor path={`events/${f.slug}/questions`} />
+          </div>
+        )}
+        </>
       )}
     </>
   );
