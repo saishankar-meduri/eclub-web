@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { isMarketingDomain } from '../lib/constants';
 
 let sdkPromise = null;
 function loadAuthSdk() {
@@ -139,6 +140,7 @@ export default function ProfileButton() {
   const role = authState.profile?.role || serverInfo?.role;
   const domainId = authState.profile?.domainId || serverInfo?.domainId;
   const isAdmin = role === 'superadmin' || role === 'domainHead';
+  const canSendMarketing = role === 'superadmin' || (role === 'domainHead' && isMarketingDomain(domainId, ''));
   const isSelected =
     !isAdmin &&
     (serverInfo?.tier === 'selected' ||
@@ -223,6 +225,11 @@ export default function ProfileButton() {
                     <Link href="/admin/recruitment" onClick={() => setOpen(false)}>
                       Recruitment panel <span aria-hidden="true">→</span>
                     </Link>
+                    {canSendMarketing && (
+                      <Link href="/admin/marketing" onClick={() => setOpen(false)}>
+                        Marketing emails <span aria-hidden="true">→</span>
+                      </Link>
+                    )}
                     {(role === 'superadmin' || domainId === 'events') && (
                       <>
                         <Link href="/admin/events" onClick={() => setOpen(false)}>
