@@ -56,6 +56,8 @@ export default function Applicants({ domainId, auth }) {
 
   const toggle = (id) => { const n = new Set(sel); n.has(id) ? n.delete(id) : n.add(id); setSel(n); };
   const chosen = apps.filter((a) => sel.has(a.id));
+  const isSuper = auth.profile?.role === "superadmin";
+  const canShortlist = chosen.length > 0 && chosen.every((a) => a.status === "applied" || a.status === "rejected");
   const canReject = chosen.length > 0 && chosen.every((a) => a.status === "applied");
   const canSelect = chosen.length > 0 && chosen.every((a) => a.status === "shortlisted");
   const allOn = shown.length > 0 && shown.every((a) => sel.has(a.id));
@@ -72,7 +74,7 @@ export default function Applicants({ domainId, auth }) {
           <option value="rejected">Rejected</option>
         </select>
       </div>
-      <button className="rc-btn" disabled={busy || !sel.size} onClick={() => act([...sel], "shortlisted")}>Shortlist selected ({sel.size})</button>
+      <button className="rc-btn" disabled={busy || !canShortlist} title="Only for applied or rejected applicants" onClick={() => act([...sel], "shortlisted")}>Shortlist selected ({sel.size})</button>
       <button className="rc-btn" disabled={busy || !canSelect} title="Only for shortlisted applicants" onClick={() => act([...sel], "selected")}>Mark selected as Selected</button>
       <button className="rc-btn ghost" disabled={busy || !canReject} title="Only for applicants who aren't shortlisted yet" onClick={() => act([...sel], "rejected")}>Reject selected</button>
       {msg && <span className="rc-muted">{msg}</span>}
@@ -115,6 +117,9 @@ export default function Applicants({ domainId, auth }) {
           )}
           {open.status === "applied" && (
             <button className="rc-btn ghost" disabled={busy} onClick={() => act([open.id], "rejected")}>Reject</button>
+          )}
+          {open.status === "selected" && isSuper && (
+            <button className="rc-btn ghost" disabled={busy} onClick={() => act([open.id], "shortlisted")}>Undo Selected</button>
           )}
           <button className="rc-btn ghost" onClick={() => setOpen(null)}>Close</button>
         </div>

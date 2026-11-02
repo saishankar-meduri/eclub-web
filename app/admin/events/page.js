@@ -55,6 +55,7 @@ function Manager({ auth }) {
     const tMin = Number(f.team_size_min), tMax = Number(f.team_size_max);
     if (!(Number(f.fee) >= 0) || !Number.isInteger(tMin) || !Number.isInteger(tMax) || tMin < 1) return setErr("Check fee and team size");
     if (tMax < tMin) return setErr("Max team size can't be less than min");
+    if (tMax > 20) return setErr("Max team size can't exceed 20");
     if (f.registration_url && !/^https?:\/\/\S+$/i.test(f.registration_url.trim())) return setErr("Registration link must start with http(s)://");
     setBusy(true);
     try {

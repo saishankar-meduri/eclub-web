@@ -27,8 +27,10 @@ export async function POST(req) {
         return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const isSuper = me.role === "superadmin";
+    // Only a superadmin can undo "selected" (back to shortlisted).
     const allowed = {
-      shortlisted: ["applied", "rejected"],
+      shortlisted: isSuper ? ["applied", "rejected", "selected"] : ["applied", "rejected"],
       selected: ["shortlisted"],
       rejected: ["applied"],
       applied: ["rejected", "shortlisted"],
@@ -36,18 +38,24 @@ export async function POST(req) {
     const batch = adminDb().batch();
     const toEmail = [];
     let skipped = 0;
+    let updated = 0;
     for (const s of snaps) {
       const cur = s.data().status;
       if (cur === status) continue;
       if (!allowed[status].includes(cur)) { skipped++; continue; }
+      const undo = cur === "selected"; // superadmin undo: no email, keep shortlistedAt
       const patch = { status };
-      if (status === "shortlisted") patch.shortlistedAt = FieldValue.serverTimestamp();
+      if (status === "shortlisted") {
+        if (!undo) patch.shortlistedAt = FieldValue.serverTimestamp();
+        patch.selectedAt = null;
+      }
       if (status === "selected") patch.selectedAt = FieldValue.serverTimestamp();
       if (status === "rejected" || status === "applied") { patch.shortlistedAt = null; patch.selectedAt = null; }
       batch.update(s.ref, patch);
-      if (status === "shortlisted" || status === "selected") toEmail.push({ id: s.id, ...s.data() });
+      updated++;
+      if ((status === "shortlisted" && !undo) || status === "selected") toEmail.push({ id: s.id, ...s.data() });
     }
-    if (toEmail.length || skipped < snaps.length) await batch.commit();
+    if (updated) await batch.commit();
 
     // Emails go out after the status is saved. A failed email must never undo or block shortlisting.
     let emailed = 0;
@@ -65,14 +73,14 @@ export async function POST(req) {
             const r = await send({ ...a, domainName: doms.get(a.domainId) });
             if (r.sent) emailed++;
           } catch (e) {
-            console.error("sendShortlistEmail failed", a.id, e.message);
+            console.error("status email failed", a.id, e.message);
             emailFailed.push(a.id);
           }
         }
       };
       await Promise.all([worker(), worker(), worker()]);
     }
-    return Response.json({ ok: true, updated: toEmail.length, skipped, emailed, emailFailed });
+    return Response.json({ ok: true, updated, skipped, emailed, emailFailed });
   } catch (e) {
     return errorResponse(e);
   }

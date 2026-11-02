@@ -32,8 +32,9 @@ service cloud.firestore {
         && e.published is bool
         && (!('fee' in e) || e.fee is number)
         && (!('team_size' in e) || e.team_size is number)
-        && (!('team_size_min' in e) || e.team_size_min is number)
-        && (!('team_size_max' in e) || e.team_size_max is number)
+        && (!('team_size_min' in e) || (e.team_size_min is int && e.team_size_min >= 1 && e.team_size_min <= 50))
+        && (!('team_size_max' in e) || (e.team_size_max is int && e.team_size_max >= 1 && e.team_size_max <= 50))
+        && (!('team_size_min' in e && 'team_size_max' in e) || e.team_size_max >= e.team_size_min)
         && (!('images' in e) || (e.images is list && e.images.size() <= 10));
     }
     match /events/{id} {
@@ -95,8 +96,8 @@ service cloud.firestore {
       allow read: if isSuper() || (hasUser() && me().role == 'domainHead' && resource.data.domainId == me().domainId);
       allow update: if (isSuper() || isHeadOf(resource.data.domainId))
         && request.resource.data.domainId == resource.data.domainId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'shortlistedAt'])
-        && request.resource.data.status in ['applied', 'shortlisted', 'rejected'];
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'shortlistedAt', 'selectedAt'])
+        && request.resource.data.status in ['applied', 'shortlisted', 'selected', 'rejected'];
       allow delete: if isSuper();
     }
 

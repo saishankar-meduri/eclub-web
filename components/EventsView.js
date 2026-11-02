@@ -2,10 +2,14 @@ import EventCard from './EventCard';
 import EventMarquee from './EventMarquee';
 import { getEvents } from '../lib/data';
 
-// One horizontal scroll of every event, oldest to newest. The badge on each card
-// (Upcoming / Live / Past) still tells the status, so no split into two pages.
+// One horizontal scroll of every event: live/upcoming first (soonest first), then past
+// (most recent first). The badge on each card (Upcoming / Live / Past) tells the status.
 export default async function EventsView() {
-  const events = await getEvents({ statuses: ['live', 'upcoming', 'past'] });
+  const all = await getEvents({ statuses: ['live', 'upcoming', 'past'] });
+  const events = [
+    ...all.filter((e) => e.status !== 'past'),
+    ...all.filter((e) => e.status === 'past').reverse(),
+  ];
 
   return (
     <div className="page-shell">
@@ -22,7 +26,7 @@ export default async function EventsView() {
         </header>
 
         {events.length ? (
-          <div className="events-scroll" role="list" tabIndex={0} aria-label="All events, sorted by date">
+          <div className="events-scroll" role="list" tabIndex={0} aria-label="All events, upcoming first">
             {events.map((e) => (
               <div key={e.id} role="listitem" className="events-scroll-item">
                 <EventCard event={e} />
