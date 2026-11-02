@@ -2,7 +2,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "../../../../lib/firebaseAdmin";
 import { requireRole, errorResponse } from "../../../../lib/serverAuth";
 import { sendMarketingEmail } from "../../../../lib/sendShortlistEmail.server";
-import { EMAIL_RE, MARKETING_DOMAIN_ID } from "../../../../lib/constants";
+import { EMAIL_RE, isMarketingDomain } from "../../../../lib/constants";
 
 export const maxDuration = 60;
 
@@ -33,8 +33,10 @@ async function recipients({ audience, domainId }) {
 export async function POST(req) {
   try {
     const me = await requireRole(req, ["superadmin", "domainHead"]);
-    if (me.role !== "superadmin" && me.domainId !== MARKETING_DOMAIN_ID)
-      return Response.json({ error: "No access" }, { status: 403 });
+    if (me.role !== "superadmin") {
+      const dom = me.domainId ? (await adminDb().doc(`domains/${me.domainId}`).get()).data() : null;
+      if (!isMarketingDomain(me.domainId, dom?.name)) return Response.json({ error: "No access" }, { status: 403 });
+    }
     const { audience, domainId, subject, body, dryRun, campaignId } = await req.json();
     if (!AUDIENCES.includes(audience)) return Response.json({ error: "Bad audience" }, { status: 400 });
 

@@ -23,7 +23,7 @@ service cloud.firestore {
     function canManageEvents() { return isSuper() || isHeadOf('events'); }
     function validEvent(id) {
       let e = request.resource.data;
-      return e.keys().hasOnly(['title','slug','description','schedule','rules','date','venue','fee','team_size','banner_url','registration_url','status','published','images','reg_enabled','reg_type','reg_deadline'])
+      return e.keys().hasOnly(['title','slug','description','schedule','rules','date','venue','fee','team_size','team_size_min','team_size_max','banner_url','registration_url','status','published','images','reg_enabled','reg_type','reg_deadline'])
         && e.keys().hasAll(['title','slug','date','status','published'])
         && e.title is string && e.title.size() > 0 && e.title.size() <= 150
         && e.slug == id && id.matches('^[a-z0-9-]{1,80}$')
@@ -32,6 +32,8 @@ service cloud.firestore {
         && e.published is bool
         && (!('fee' in e) || e.fee is number)
         && (!('team_size' in e) || e.team_size is number)
+        && (!('team_size_min' in e) || e.team_size_min is number)
+        && (!('team_size_max' in e) || e.team_size_max is number)
         && (!('images' in e) || (e.images is list && e.images.size() <= 10))
         && (!('reg_enabled' in e) || e.reg_enabled is bool)
         && (!('reg_type' in e) || e.reg_type in ['individual','team'])
