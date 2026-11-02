@@ -1,4 +1,4 @@
-const LABELS = { upcoming: 'Upcoming', live: 'Live now', past: 'Archive' };
+const LABELS = { upcoming: 'Upcoming', live: 'Live now', past: 'Past' };
 
 export default function StatusBadge({ status }) {
   return (

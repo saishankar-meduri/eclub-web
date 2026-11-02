@@ -28,7 +28,7 @@ export async function POST(req) {
     mine.map(async (a) => {
       const dom = await adminDb().doc(`domains/${a.domainId}`).get();
       let whatsappLink = null;
-      if (a.status === "shortlisted") {
+      if (a.status === "shortlisted" || a.status === "selected") {
         const p = await adminDb().doc(`domains/${a.domainId}/private/settings`).get();
         whatsappLink = p.data()?.whatsappLink || null;
       }

@@ -101,8 +101,8 @@ service cloud.firestore {
       allow read: if isSuper() || (hasUser() && me().role == 'domainHead' && resource.data.domainId == me().domainId);
       allow update: if (isSuper() || isHeadOf(resource.data.domainId))
         && request.resource.data.domainId == resource.data.domainId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'shortlistedAt'])
-        && request.resource.data.status in ['applied', 'shortlisted', 'rejected'];
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'shortlistedAt', 'selectedAt'])
+        && request.resource.data.status in ['applied', 'shortlisted', 'selected', 'rejected'];
       allow delete: if isSuper();
     }
 

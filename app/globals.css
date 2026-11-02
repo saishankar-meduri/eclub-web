@@ -1144,6 +1144,27 @@ p {
   color: var(--muted);
 }
 
+/* All events in one horizontal scroll, sorted by date */
+.events-scroll {
+  display: flex;
+  gap: 24px;
+  overflow-x: auto;
+  padding: 4px 2px 20px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.events-scroll-item {
+  flex: 0 0 min(320px, 82vw);
+  display: flex;
+  scroll-snap-align: start;
+}
+
+.events-scroll-item > .card {
+  width: 100%;
+}
+
 /* Empty State Panel */
 .empty-panel {
   display: flex;

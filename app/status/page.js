@@ -5,6 +5,7 @@ import { useState } from "react";
 const STATUS_LABELS = {
   applied: "Under review",
   shortlisted: "Shortlisted",
+  selected: "Selected",
   rejected: "Not selected",
 };
 
@@ -143,6 +144,25 @@ export default function Status() {
                           </a>
                         ) : (
                           <p className="rc-muted">The onboarding group link will be shared soon.</p>
+                        )}
+                      </div>
+                    )}
+
+                    {r.status === "selected" && (
+                      <div className="status-callout">
+                        <p>
+                          Congratulations, your membership for <strong>{r.domain}</strong> is
+                          confirmed. Welcome to the club!
+                        </p>
+                        {r.whatsappLink && (
+                          <a
+                            href={r.whatsappLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn-pill-primary btn-pill-sm"
+                          >
+                            Join WhatsApp group <span className="btn-arrow" aria-hidden="true">↗</span>
+                          </a>
                         )}
                       </div>
                     )}

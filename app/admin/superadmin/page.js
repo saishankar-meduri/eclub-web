@@ -4,6 +4,7 @@ import { collection, getDocs, getDoc, setDoc, deleteDoc, doc, query, where, getC
 import { db } from "../../../lib/firebase";
 import { EMAIL_RE, slugify } from "../../../lib/constants";
 import AdminGate from "../../../components/AdminGate";
+import MarketingEmail from "../../../components/recruitment/MarketingEmail";
 
 export default function Page() {
   return <AdminGate roles={["superadmin"]}>{(auth) => <Panel auth={auth} />}</AdminGate>;
@@ -122,6 +123,8 @@ function Panel({ auth }) {
         </table>
         <button className="rc-btn" onClick={exportCsv}>Export all (CSV)</button>
       </div>
+
+      <MarketingEmail auth={auth} domains={rows} />
 
       <div className="rc-card">
         <h3>Create domain</h3>

@@ -119,11 +119,11 @@ export default async function EventPage({ params }) {
               )}
               <div>
                 <dt>Entry fee</dt>
-                <dd>{formatFee(event.fee, event.team_size)}</dd>
+                <dd>{formatFee(event.fee, event)}</dd>
               </div>
               <div>
                 <dt>Team size</dt>
-                <dd>{formatTeam(event.team_size)}</dd>
+                <dd>{formatTeam(event)}</dd>
               </div>
             </dl>
 

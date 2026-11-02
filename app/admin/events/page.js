@@ -41,7 +41,7 @@ function Manager({ auth }) {
     setErr("");
     setF({
       title: e.title, slug: e.slug, description: e.description || "", schedule: e.schedule || "", rules: e.rules || "",
-      date: toInput(e.date.toDate()), venue: e.venue || "", fee: String(e.fee ?? 0), team_size: String(e.team_size ?? 1),
+      date: toInput(e.date.toDate()), venue: e.venue || "", fee: String(e.fee ?? 0), team_size_min: String(e.team_size_min ?? e.team_size ?? 1), team_size_max: String(e.team_size_max ?? e.team_size ?? 1),
       registration_url: e.registration_url || "", status: e.status, published: !!e.published,
       images: e.images?.length ? e.images : e.banner_url ? [e.banner_url] : [],
       reg_enabled: !!e.reg_enabled,
@@ -57,7 +57,10 @@ function Manager({ auth }) {
     if (!f.title.trim()) return setErr("Title required");
     if (!/^[a-z0-9-]{1,80}$/.test(slug)) return setErr("Slug: lowercase letters, numbers, dashes");
     if (isNaN(when)) return setErr("Pick a date and time");
-    if (!(Number(f.fee) >= 0) || !(Number(f.team_size) >= 1)) return setErr("Check fee and team size");
+    const tMin = Number(f.team_size_min), tMax = Number(f.team_size_max);
+    if (!(Number(f.fee) >= 0) || !Number.isInteger(tMin) || !Number.isInteger(tMax) || tMin < 1) return setErr("Check fee and team size");
+    if (tMax < tMin) return setErr("Max team size can't be less than min");
+    if (tMax > 20) return setErr("Max team size can't exceed 20");
     if (f.registration_url && !/^https?:\/\/\S+$/i.test(f.registration_url.trim())) return setErr("Registration link must start with http(s)://");
     if (f.reg_enabled && f.reg_type === "team" && Number(f.team_size) < 2) return setErr("Team events need a team size (max members) of at least 2");
     if (f.reg_deadline && isNaN(new Date(f.reg_deadline))) return setErr("Check the registration deadline");
@@ -76,7 +79,9 @@ function Manager({ auth }) {
         date: Timestamp.fromDate(when),
         venue: f.venue.trim(),
         fee: Number(f.fee),
-        team_size: Number(f.team_size),
+        team_size_min: tMin,
+        team_size_max: tMax,
+        team_size: tMax, // legacy field, kept for older readers
         banner_url: f.images[0] || null,
         registration_url: f.registration_url.trim() || null,
         status: f.status,
@@ -152,7 +157,8 @@ function Manager({ auth }) {
           </div>
           <div className="rc-row">
             <div><label>Fee (₹, 0 = free)</label><input type="number" min="0" value={f.fee} onChange={set("fee")} /></div>
-            <div><label>Team size</label><input type="number" min="1" value={f.team_size} onChange={set("team_size")} /></div>
+            <div><label>Team size (min)</label><input type="number" min="1" value={f.team_size_min} onChange={set("team_size_min")} /></div>
+            <div><label>Team size (max)</label><input type="number" min="1" value={f.team_size_max} onChange={set("team_size_max")} /></div>
             <div>
               <label>Status</label>
               <select value={f.status} onChange={set("status")}>

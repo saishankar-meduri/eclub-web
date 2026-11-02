@@ -1,0 +1,67 @@
+/* Team / contact cards */
+.team-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 28px 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface, transparent);
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.25s ease, box-shadow 0.35s ease;
+}
+.team-card:hover,
+.team-card:focus-within {
+  transform: translateY(-6px);
+  border-color: var(--fg);
+  box-shadow: 0 18px 38px -20px rgba(0, 0, 0, 0.55);
+}
+.team-card-lead { border-color: var(--fg); }
+
+.team-photo {
+  width: min(190px, 78%);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: var(--surface-subtle, transparent);
+  border: 1px solid var(--line);
+  margin-bottom: 18px;
+  transition: box-shadow 0.35s ease;
+}
+.team-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.team-photo span { font-size: 2.4rem; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
+.team-card:hover .team-photo { box-shadow: 0 0 0 4px var(--bg), 0 0 0 6px var(--fg); }
+.team-card:hover .team-photo img { transform: scale(1.1); }
+
+.team-name { font-size: 1.1rem; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.team-role { margin-top: 6px; color: var(--muted); font-size: 0.95rem; }
+
+.team-links { display: flex; justify-content: center; gap: 10px; margin-top: 16px; }
+.team-link {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--fg);
+  border: 1px solid transparent;
+  transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+.team-link svg { width: 22px; height: 22px; }
+.team-link:hover,
+.team-link:focus-visible { background: var(--fg); color: var(--bg); transform: translateY(-3px) scale(1.12); }
+
+@media (prefers-reduced-motion: reduce) {
+  .team-card, .team-photo, .team-photo img, .team-link { transition: none; }
+  .team-card:hover, .team-card:focus-within { transform: none; }
+  .team-card:hover .team-photo img { transform: none; }
+  .team-link:hover { transform: none; }
+}

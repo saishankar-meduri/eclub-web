@@ -1,11 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
+import { MARKETING_DOMAIN_ID } from "../../../lib/constants";
 import AdminGate from "../../../components/AdminGate";
 import DomainSettings from "../../../components/recruitment/DomainSettings";
 import QuestionsEditor from "../../../components/recruitment/QuestionsEditor";
 import Applicants from "../../../components/recruitment/Applicants";
+import MarketingEmail from "../../../components/recruitment/MarketingEmail";
 
 export default function Page() {
   return <AdminGate roles={["superadmin", "domainHead"]}>{(auth) => <Panel auth={auth} />}</AdminGate>;
@@ -16,6 +18,16 @@ function Panel({ auth }) {
   const [domains, setDomains] = useState([]);
   const [domainId, setDomainId] = useState(isSuper ? "" : auth.profile.domainId);
   const [tab, setTab] = useState("applicants");
+  // Superadmins get the marketing card on their own panel; the SMM head gets it here.
+  const isMarketingHead = !isSuper && auth.profile.domainId === MARKETING_DOMAIN_ID;
+  const [mailDomains, setMailDomains] = useState([]);
+
+  useEffect(() => {
+    if (!isMarketingHead) return;
+    getDocs(query(collection(db, "domains"), where("open", "==", true)))
+      .then((s) => setMailDomains(s.docs.map((d) => ({ id: d.id, ...d.data() }))))
+      .catch(() => {});
+  }, [isMarketingHead]);
 
   useEffect(() => {
     if (!isSuper) return;
@@ -35,6 +47,7 @@ function Panel({ auth }) {
         {(isSuper || auth.profile.domainId === "events") && <a className="rc-btn ghost" href="/admin/events">Manage events</a>}
         <button className="rc-btn ghost" onClick={auth.signOut}>Sign out</button>
       </div>
+      {isMarketingHead && <MarketingEmail auth={auth} domains={mailDomains} />}
       {isSuper && (
         <select value={domainId} onChange={(e) => setDomainId(e.target.value)}>
           {domains.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}

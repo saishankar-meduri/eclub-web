@@ -1,0 +1,710 @@
+diff --git a/app/admin/events/page.js b/app/admin/events/page.js
+index 31ca529..f68e586 100644
+--- a/app/admin/events/page.js
++++ b/app/admin/events/page.js
+@@ -18,7 +18,7 @@ const pad = (n) => String(n).padStart(2, "0");
+ const toInput = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+ const blank = {
+   title: "", slug: "", description: "", schedule: "", rules: "", date: "", venue: "",
+-  fee: "0", team_size: "1", registration_url: "", status: "upcoming", published: false, images: [],
++  fee: "0", team_size_min: "1", team_size_max: "1", registration_url: "", status: "upcoming", published: false, images: [],
+ };
+ 
+ function Manager({ auth }) {
+@@ -39,7 +39,7 @@ function Manager({ auth }) {
+     setErr("");
+     setF({
+       title: e.title, slug: e.slug, description: e.description || "", schedule: e.schedule || "", rules: e.rules || "",
+-      date: toInput(e.date.toDate()), venue: e.venue || "", fee: String(e.fee ?? 0), team_size: String(e.team_size ?? 1),
++      date: toInput(e.date.toDate()), venue: e.venue || "", fee: String(e.fee ?? 0), team_size_min: String(e.team_size_min ?? e.team_size ?? 1), team_size_max: String(e.team_size_max ?? e.team_size ?? 1),
+       registration_url: e.registration_url || "", status: e.status, published: !!e.published,
+       images: e.images?.length ? e.images : e.banner_url ? [e.banner_url] : [],
+     });
+@@ -52,7 +52,9 @@ function Manager({ auth }) {
+     if (!f.title.trim()) return setErr("Title required");
+     if (!/^[a-z0-9-]{1,80}$/.test(slug)) return setErr("Slug: lowercase letters, numbers, dashes");
+     if (isNaN(when)) return setErr("Pick a date and time");
+-    if (!(Number(f.fee) >= 0) || !(Number(f.team_size) >= 1)) return setErr("Check fee and team size");
++    const tMin = Number(f.team_size_min), tMax = Number(f.team_size_max);
++    if (!(Number(f.fee) >= 0) || !Number.isInteger(tMin) || !Number.isInteger(tMax) || tMin < 1) return setErr("Check fee and team size");
++    if (tMax < tMin) return setErr("Max team size can't be less than min");
+     if (f.registration_url && !/^https?:\/\/\S+$/i.test(f.registration_url.trim())) return setErr("Registration link must start with http(s)://");
+     setBusy(true);
+     try {
+@@ -69,7 +71,9 @@ function Manager({ auth }) {
+         date: Timestamp.fromDate(when),
+         venue: f.venue.trim(),
+         fee: Number(f.fee),
+-        team_size: Number(f.team_size),
++        team_size_min: tMin,
++        team_size_max: tMax,
++        team_size: tMax, // legacy field, kept for older readers
+         banner_url: f.images[0] || null,
+         registration_url: f.registration_url.trim() || null,
+         status: f.status,
+@@ -140,7 +144,8 @@ function Manager({ auth }) {
+           </div>
+           <div className="rc-row">
+             <div><label>Fee (₹, 0 = free)</label><input type="number" min="0" value={f.fee} onChange={set("fee")} /></div>
+-            <div><label>Team size</label><input type="number" min="1" value={f.team_size} onChange={set("team_size")} /></div>
++            <div><label>Team size (min)</label><input type="number" min="1" value={f.team_size_min} onChange={set("team_size_min")} /></div>
++            <div><label>Team size (max)</label><input type="number" min="1" value={f.team_size_max} onChange={set("team_size_max")} /></div>
+             <div>
+               <label>Status</label>
+               <select value={f.status} onChange={set("status")}>
+diff --git a/app/admin/superadmin/page.js b/app/admin/superadmin/page.js
+index b8fd7ed..14e46f5 100644
+--- a/app/admin/superadmin/page.js
++++ b/app/admin/superadmin/page.js
+@@ -4,6 +4,7 @@ import { collection, getDocs, getDoc, setDoc, deleteDoc, doc, query, where, getC
+ import { db } from "../../../lib/firebase";
+ import { EMAIL_RE, slugify } from "../../../lib/constants";
+ import AdminGate from "../../../components/AdminGate";
++import MarketingEmail from "../../../components/recruitment/MarketingEmail";
+ 
+ export default function Page() {
+   return <AdminGate roles={["superadmin"]}>{(auth) => <Panel auth={auth} />}</AdminGate>;
+@@ -123,6 +124,8 @@ function Panel({ auth }) {
+         <button className="rc-btn" onClick={exportCsv}>Export all (CSV)</button>
+       </div>
+ 
++      <MarketingEmail auth={auth} domains={rows} />
++
+       <div className="rc-card">
+         <h3>Create domain</h3>
+         <input placeholder="Name" value={nd.name} onChange={(e) => setNd({ ...nd, name: e.target.value })} />
+diff --git a/app/api/admin/applications/status/route.js b/app/api/admin/applications/status/route.js
+index b3f9115..d1502e5 100644
+--- a/app/api/admin/applications/status/route.js
++++ b/app/api/admin/applications/status/route.js
+@@ -1,18 +1,20 @@
+ import { FieldValue } from "firebase-admin/firestore";
+ import { adminDb } from "../../../../../lib/firebaseAdmin";
+ import { requireRole, errorResponse } from "../../../../../lib/serverAuth";
+-import { sendShortlistEmail } from "../../../../../lib/sendShortlistEmail.server";
++import { sendShortlistEmail, sendMembershipEmail } from "../../../../../lib/sendShortlistEmail.server";
+ 
+ export const maxDuration = 60; // bulk shortlists send many emails
+ 
+-// POST { ids: string[], status: "shortlisted" | "rejected" | "applied" }
++// POST { ids: string[], status: "shortlisted" | "selected" | "rejected" | "applied" }
++// Flow: applied -> shortlisted -> selected. Rejecting is only possible before shortlisting;
++// "selected" (membership confirmed) is only possible after shortlisting.
+ export async function POST(req) {
+   try {
+     const me = await requireRole(req, ["superadmin", "domainHead"]);
+     const { ids, status } = await req.json();
+     if (!Array.isArray(ids) || !ids.length || ids.length > 400)
+       return Response.json({ error: "Bad ids" }, { status: 400 });
+-    if (!["shortlisted", "rejected", "applied"].includes(status))
++    if (!["shortlisted", "selected", "rejected", "applied"].includes(status))
+       return Response.json({ error: "Bad status" }, { status: 400 });
+ 
+     const refs = ids.map((id) => adminDb().doc(`applications/${id}`));
+@@ -25,17 +27,27 @@ export async function POST(req) {
+         return Response.json({ error: "Forbidden" }, { status: 403 });
+     }
+ 
++    const allowed = {
++      shortlisted: ["applied", "rejected"],
++      selected: ["shortlisted"],
++      rejected: ["applied"],
++      applied: ["rejected", "shortlisted"],
++    };
+     const batch = adminDb().batch();
+     const toEmail = [];
++    let skipped = 0;
+     for (const s of snaps) {
+-      if (s.data().status === status) continue;
+-      batch.update(s.ref, {
+-        status,
+-        shortlistedAt: status === "shortlisted" ? FieldValue.serverTimestamp() : null,
+-      });
+-      if (status === "shortlisted") toEmail.push({ id: s.id, ...s.data() });
++      const cur = s.data().status;
++      if (cur === status) continue;
++      if (!allowed[status].includes(cur)) { skipped++; continue; }
++      const patch = { status };
++      if (status === "shortlisted") patch.shortlistedAt = FieldValue.serverTimestamp();
++      if (status === "selected") patch.selectedAt = FieldValue.serverTimestamp();
++      if (status === "rejected" || status === "applied") { patch.shortlistedAt = null; patch.selectedAt = null; }
++      batch.update(s.ref, patch);
++      if (status === "shortlisted" || status === "selected") toEmail.push({ id: s.id, ...s.data() });
+     }
+-    await batch.commit();
++    if (toEmail.length || skipped < snaps.length) await batch.commit();
+ 
+     // Emails go out after the status is saved. A failed email must never undo or block shortlisting.
+     let emailed = 0;
+@@ -49,7 +61,8 @@ export async function POST(req) {
+       const worker = async () => {
+         for (let a; (a = queue.shift()); ) {
+           try {
+-            const r = await sendShortlistEmail({ ...a, domainName: doms.get(a.domainId) });
++            const send = status === "selected" ? sendMembershipEmail : sendShortlistEmail;
++            const r = await send({ ...a, domainName: doms.get(a.domainId) });
+             if (r.sent) emailed++;
+           } catch (e) {
+             console.error("sendShortlistEmail failed", a.id, e.message);
+@@ -59,7 +72,7 @@ export async function POST(req) {
+       };
+       await Promise.all([worker(), worker(), worker()]);
+     }
+-    return Response.json({ ok: true, updated: toEmail.length, emailed, emailFailed });
++    return Response.json({ ok: true, updated: toEmail.length, skipped, emailed, emailFailed });
+   } catch (e) {
+     return errorResponse(e);
+   }
+diff --git a/app/api/admin/marketing/route.js b/app/api/admin/marketing/route.js
+new file mode 100644
+index 0000000..9eef51b
+--- /dev/null
++++ b/app/api/admin/marketing/route.js
+@@ -0,0 +1,65 @@
++import { adminDb } from "../../../../lib/firebaseAdmin";
++import { requireRole, errorResponse } from "../../../../lib/serverAuth";
++import { sendMarketingEmail } from "../../../../lib/sendShortlistEmail.server";
++import { EMAIL_RE } from "../../../../lib/constants";
++
++export const maxDuration = 60;
++
++const AUDIENCES = ["all", "applied", "shortlisted", "selected"];
++const MAX_RECIPIENTS = 500;
++
++async function recipients({ audience, domainId }) {
++  let q = adminDb().collection("applications");
++  if (audience !== "all") q = q.where("status", "==", audience);
++  if (domainId) q = q.where("domainId", "==", domainId);
++  const snap = await q.get();
++  const byEmail = new Map();
++  for (const d of snap.docs) {
++    const a = d.data();
++    const email = String(a.email || "").trim().toLowerCase();
++    if (EMAIL_RE.test(email) && !byEmail.has(email)) byEmail.set(email, { email, name: a.name });
++  }
++  return [...byEmail.values()];
++}
++
++// POST { audience, domainId?, subject, body, dryRun? }  superadmin only.
++// dryRun returns just the recipient count so the UI can confirm before sending.
++export async function POST(req) {
++  try {
++    await requireRole(req, ["superadmin"]);
++    const { audience, domainId, subject, body, dryRun } = await req.json();
++    if (!AUDIENCES.includes(audience)) return Response.json({ error: "Bad audience" }, { status: 400 });
++
++    const list = await recipients({ audience, domainId: domainId || null });
++    if (dryRun) return Response.json({ count: list.length });
++
++    const subj = String(subject || "").trim();
++    const text = String(body || "").trim();
++    if (!subj || subj.length > 150) return Response.json({ error: "Subject required (max 150 chars)" }, { status: 400 });
++    if (!text || text.length > 5000) return Response.json({ error: "Message required (max 5000 chars)" }, { status: 400 });
++    if (!list.length) return Response.json({ error: "No recipients" }, { status: 400 });
++    if (list.length > MAX_RECIPIENTS)
++      return Response.json({ error: `Too many recipients (${list.length}). Narrow it to one domain.` }, { status: 400 });
++
++    let sent = 0;
++    let failed = 0;
++    let notConfigured = false;
++    const queue = [...list];
++    const worker = async () => {
++      for (let r; (r = queue.shift()); ) {
++        try {
++          const res = await sendMarketingEmail({ to: r.email, name: r.name, subject: subj, body: text });
++          if (res.sent) sent++;
++          else notConfigured = true;
++        } catch (e) {
++          console.error("sendMarketingEmail failed", e.message);
++          failed++;
++        }
++      }
++    };
++    await Promise.all([worker(), worker(), worker()]);
++    return Response.json({ ok: true, total: list.length, sent, failed, notConfigured });
++  } catch (e) {
++    return errorResponse(e);
++  }
++}
+diff --git a/app/api/status/route.js b/app/api/status/route.js
+index 289dc96..0d95ded 100644
+--- a/app/api/status/route.js
++++ b/app/api/status/route.js
+@@ -28,7 +28,7 @@ export async function POST(req) {
+     mine.map(async (a) => {
+       const dom = await adminDb().doc(`domains/${a.domainId}`).get();
+       let whatsappLink = null;
+-      if (a.status === "shortlisted") {
++      if (a.status === "shortlisted" || a.status === "selected") {
+         const p = await adminDb().doc(`domains/${a.domainId}/private/settings`).get();
+         whatsappLink = p.data()?.whatsappLink || null;
+       }
+diff --git a/app/events/[slug]/page.js b/app/events/[slug]/page.js
+index eca3252..3005d4c 100644
+--- a/app/events/[slug]/page.js
++++ b/app/events/[slug]/page.js
+@@ -119,11 +119,11 @@ export default async function EventPage({ params }) {
+               )}
+               <div>
+                 <dt>Entry fee</dt>
+-                <dd>{formatFee(event.fee, event.team_size)}</dd>
++                <dd>{formatFee(event.fee, event)}</dd>
+               </div>
+               <div>
+                 <dt>Team size</dt>
+-                <dd>{formatTeam(event.team_size)}</dd>
++                <dd>{formatTeam(event)}</dd>
+               </div>
+             </dl>
+ 
+diff --git a/app/events/past/page.js b/app/events/past/page.js
+index c89fbdb..e1b25ae 100644
+--- a/app/events/past/page.js
++++ b/app/events/past/page.js
+@@ -1,8 +1,6 @@
+-import EventsView from '../../../components/EventsView';
+-
+-export const revalidate = 60;
+-export const metadata = { title: 'Past events' };
++import { redirect } from 'next/navigation';
+ 
++// Past events now live in the single scroll on /events; keep old links working.
+ export default function PastEventsPage() {
+-  return <EventsView past />;
++  redirect('/events');
+ }
+diff --git a/app/globals.css b/app/globals.css
+index 53f7bc4..5e269ad 100644
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -1144,6 +1144,27 @@ p {
+   color: var(--muted);
+ }
+ 
++/* All events in one horizontal scroll, sorted by date */
++.events-scroll {
++  display: flex;
++  gap: 24px;
++  overflow-x: auto;
++  padding: 4px 2px 20px;
++  scroll-snap-type: x proximity;
++  scrollbar-width: thin;
++  -webkit-overflow-scrolling: touch;
++}
++
++.events-scroll-item {
++  flex: 0 0 min(320px, 82vw);
++  display: flex;
++  scroll-snap-align: start;
++}
++
++.events-scroll-item > .card {
++  width: 100%;
++}
++
+ /* Empty State Panel */
+ .empty-panel {
+   display: flex;
+diff --git a/app/status/page.js b/app/status/page.js
+index 1a67001..8d6fb42 100644
+--- a/app/status/page.js
++++ b/app/status/page.js
+@@ -5,6 +5,7 @@ import { useState } from "react";
+ const STATUS_LABELS = {
+   applied: "Under review",
+   shortlisted: "Shortlisted",
++  selected: "Selected",
+   rejected: "Not selected",
+ };
+ 
+@@ -147,6 +148,25 @@ export default function Status() {
+                       </div>
+                     )}
+ 
++                    {r.status === "selected" && (
++                      <div className="status-callout">
++                        <p>
++                          Congratulations, your membership for <strong>{r.domain}</strong> is
++                          confirmed. Welcome to the club!
++                        </p>
++                        {r.whatsappLink && (
++                          <a
++                            href={r.whatsappLink}
++                            target="_blank"
++                            rel="noopener noreferrer"
++                            className="btn-pill-primary btn-pill-sm"
++                          >
++                            Join WhatsApp group <span className="btn-arrow" aria-hidden="true">↗</span>
++                          </a>
++                        )}
++                      </div>
++                    )}
++
+                     {r.status === "applied" && (
+                       <p className="rc-muted">
+                         Your responses are currently being reviewed by the domain leads.
+diff --git a/components/EventCard.js b/components/EventCard.js
+index 3a795a6..224ec95 100644
+--- a/components/EventCard.js
++++ b/components/EventCard.js
+@@ -23,7 +23,7 @@ export default function EventCard({ event }) {
+         <h3 className="card-title">{event.title}</h3>
+         {event.venue && <p className="card-venue">{event.venue}</p>}
+         <div className="card-footer">
+-          <span className="card-fee">{formatFee(event.fee, event.team_size)}</span>
++          <span className="card-fee">{formatFee(event.fee, event)}</span>
+           <span className="card-cta" aria-hidden="true">
+             Details <span className="btn-arrow">→</span>
+           </span>
+diff --git a/components/EventsView.js b/components/EventsView.js
+index d866407..5545f01 100644
+--- a/components/EventsView.js
++++ b/components/EventsView.js
+@@ -1,12 +1,11 @@
+-import Link from 'next/link';
+ import EventCard from './EventCard';
+ import EventMarquee from './EventMarquee';
+ import { getEvents } from '../lib/data';
+ 
+-export default async function EventsView({ past = false }) {
+-  const events = past
+-    ? await getEvents({ statuses: ['past'], ascending: false })
+-    : await getEvents({ statuses: ['live', 'upcoming'] });
++// One horizontal scroll of every event, oldest to newest. The badge on each card
++// (Upcoming / Live / Past) still tells the status, so no split into two pages.
++export default async function EventsView() {
++  const events = await getEvents({ statuses: ['live', 'upcoming', 'past'] });
+ 
+   return (
+     <div className="page-shell">
+@@ -19,34 +18,19 @@ export default async function EventsView({ past = false }) {
+             <span className="modern-kicker-rule" aria-hidden="true" />
+             <span>Club Calendar</span>
+           </div>
+-          <h1 className="events-dual-heading">
+-            <Link
+-              href="/events"
+-              className="events-heading-link"
+-              aria-current={!past ? 'page' : undefined}
+-            >
+-              Upcoming events
+-            </Link>
+-            <Link
+-              href="/events/past"
+-              className="events-heading-link"
+-              aria-current={past ? 'page' : undefined}
+-            >
+-              Past events
+-            </Link>
+-          </h1>
++          <h1 className="events-dual-heading">Events</h1>
+         </header>
+ 
+         {events.length ? (
+-          <div className="grid">
++          <div className="events-scroll" role="list" tabIndex={0} aria-label="All events, sorted by date">
+             {events.map((e) => (
+-              <EventCard key={e.id} event={e} />
++              <div key={e.id} role="listitem" className="events-scroll-item">
++                <EventCard event={e} />
++              </div>
+             ))}
+           </div>
+         ) : (
+-          <p className="events-empty-text">
+-            {past ? 'No past events' : 'No upcoming events'}
+-          </p>
++          <p className="events-empty-text">No events yet</p>
+         )}
+       </section>
+     </div>
+diff --git a/components/StatusBadge.js b/components/StatusBadge.js
+index 9a91bf4..3e03174 100644
+--- a/components/StatusBadge.js
++++ b/components/StatusBadge.js
+@@ -1,4 +1,4 @@
+-const LABELS = { upcoming: 'Upcoming', live: 'Live now', past: 'Archive' };
++const LABELS = { upcoming: 'Upcoming', live: 'Live now', past: 'Past' };
+ 
+ export default function StatusBadge({ status }) {
+   return (
+diff --git a/components/recruitment/Applicants.js b/components/recruitment/Applicants.js
+index dcf0acf..9b381f8 100644
+--- a/components/recruitment/Applicants.js
++++ b/components/recruitment/Applicants.js
+@@ -45,6 +45,8 @@ export default function Applicants({ domainId, auth }) {
+         ? "Failed"
+         : j.emailFailed?.length
+         ? `Updated ${ids.length}. ${j.emailFailed.length} email(s) failed to send; those applicants can still see their status at /status.`
++        : j.skipped
++        ? `Updated ${ids.length - j.skipped}. Skipped ${j.skipped} (not allowed from their current status).`
+         : `Updated ${ids.length}`
+     );
+     setBusy(false);
+@@ -53,6 +55,9 @@ export default function Applicants({ domainId, auth }) {
+   }
+ 
+   const toggle = (id) => { const n = new Set(sel); n.has(id) ? n.delete(id) : n.add(id); setSel(n); };
++  const chosen = apps.filter((a) => sel.has(a.id));
++  const canReject = chosen.length > 0 && chosen.every((a) => a.status === "applied");
++  const canSelect = chosen.length > 0 && chosen.every((a) => a.status === "shortlisted");
+   const allOn = shown.length > 0 && shown.every((a) => sel.has(a.id));
+ 
+   return (
+@@ -63,11 +68,13 @@ export default function Applicants({ domainId, auth }) {
+           <option value="all">All statuses</option>
+           <option value="applied">Applied</option>
+           <option value="shortlisted">Shortlisted</option>
++          <option value="selected">Selected</option>
+           <option value="rejected">Rejected</option>
+         </select>
+       </div>
+       <button className="rc-btn" disabled={busy || !sel.size} onClick={() => act([...sel], "shortlisted")}>Shortlist selected ({sel.size})</button>
+-      <button className="rc-btn ghost" disabled={busy || !sel.size} onClick={() => act([...sel], "rejected")}>Reject selected</button>
++      <button className="rc-btn" disabled={busy || !canSelect} title="Only for shortlisted applicants" onClick={() => act([...sel], "selected")}>Mark selected as Selected</button>
++      <button className="rc-btn ghost" disabled={busy || !canReject} title="Only for applicants who aren't shortlisted yet" onClick={() => act([...sel], "rejected")}>Reject selected</button>
+       {msg && <span className="rc-muted">{msg}</span>}
+ 
+       <table>
+@@ -100,8 +107,15 @@ export default function Applicants({ domainId, auth }) {
+               <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{v}</p>
+             </div>
+           ))}
+-          <button className="rc-btn" disabled={busy} onClick={() => act([open.id], "shortlisted")}>Shortlist</button>
+-          <button className="rc-btn ghost" disabled={busy} onClick={() => act([open.id], "rejected")}>Reject</button>
++          {(open.status === "applied" || open.status === "rejected") && (
++            <button className="rc-btn" disabled={busy} onClick={() => act([open.id], "shortlisted")}>Shortlist</button>
++          )}
++          {open.status === "shortlisted" && (
++            <button className="rc-btn" disabled={busy} onClick={() => act([open.id], "selected")}>Selected</button>
++          )}
++          {open.status === "applied" && (
++            <button className="rc-btn ghost" disabled={busy} onClick={() => act([open.id], "rejected")}>Reject</button>
++          )}
+           <button className="rc-btn ghost" onClick={() => setOpen(null)}>Close</button>
+         </div>
+       )}
+diff --git a/components/recruitment/MarketingEmail.js b/components/recruitment/MarketingEmail.js
+new file mode 100644
+index 0000000..6fead61
+--- /dev/null
++++ b/components/recruitment/MarketingEmail.js
+@@ -0,0 +1,71 @@
++"use client";
++import { useState } from "react";
++
++const AUDIENCES = [
++  ["selected", "Members (Selected)"],
++  ["shortlisted", "Shortlisted"],
++  ["applied", "Applied (under review)"],
++  ["all", "Everyone who applied"],
++];
++
++export default function MarketingEmail({ auth, domains }) {
++  const [audience, setAudience] = useState("selected");
++  const [domainId, setDomainId] = useState("");
++  const [subject, setSubject] = useState("");
++  const [body, setBody] = useState("");
++  const [busy, setBusy] = useState(false);
++  const [msg, setMsg] = useState("");
++
++  async function call(extra) {
++    const r = await fetch("/api/admin/marketing", {
++      method: "POST",
++      headers: { "Content-Type": "application/json", Authorization: `Bearer ${await auth.token()}` },
++      body: JSON.stringify({ audience, domainId: domainId || undefined, subject, body, ...extra }),
++    });
++    return { ok: r.ok, j: await r.json().catch(() => ({})) };
++  }
++
++  async function send() {
++    setMsg("");
++    if (!subject.trim() || !body.trim()) return setMsg("Add a subject and a message");
++    setBusy(true);
++    try {
++      const pre = await call({ dryRun: true });
++      if (!pre.ok) return setMsg(pre.j.error || "Failed");
++      if (!pre.j.count) return setMsg("No recipients for that audience");
++      if (!confirm(`Send "${subject.trim()}" to ${pre.j.count} recipient(s)? This can't be undone.`)) return;
++      const { ok, j } = await call({});
++      if (!ok) return setMsg(j.error || "Failed");
++      setMsg(
++        j.notConfigured
++          ? "SMTP isn't configured, so nothing was sent."
++          : `Sent ${j.sent} of ${j.total}${j.failed ? `, ${j.failed} failed` : ""}.`
++      );
++      if (j.sent) { setSubject(""); setBody(""); }
++    } finally {
++      setBusy(false);
++    }
++  }
++
++  return (
++    <div className="rc-card">
++      <h3>Marketing email</h3>
++      <p className="rc-muted">Send an announcement to applicants or members. Each person gets their own email.</p>
++      <div className="rc-row">
++        <select value={audience} onChange={(e) => setAudience(e.target.value)}>
++          {AUDIENCES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
++        </select>
++        <select value={domainId} onChange={(e) => setDomainId(e.target.value)}>
++          <option value="">All domains</option>
++          {domains.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
++        </select>
++      </div>
++      <label>Subject</label>
++      <input value={subject} maxLength={150} onChange={(e) => setSubject(e.target.value)} />
++      <label>Message (blank line = new paragraph)</label>
++      <textarea rows={6} value={body} maxLength={5000} onChange={(e) => setBody(e.target.value)} />
++      {msg && <p className="rc-muted">{msg}</p>}
++      <button className="rc-btn" disabled={busy} onClick={send}>{busy ? "Sending…" : "Send email"}</button>
++    </div>
++  );
++}
+diff --git a/firestore.rules b/firestore.rules
+index 40cde58..75d617b 100644
+--- a/firestore.rules
++++ b/firestore.rules
+@@ -23,7 +23,7 @@ service cloud.firestore {
+     function canManageEvents() { return isSuper() || isHeadOf('events'); }
+     function validEvent(id) {
+       let e = request.resource.data;
+-      return e.keys().hasOnly(['title','slug','description','schedule','rules','date','venue','fee','team_size','banner_url','registration_url','status','published','images'])
++      return e.keys().hasOnly(['title','slug','description','schedule','rules','date','venue','fee','team_size','team_size_min','team_size_max','banner_url','registration_url','status','published','images'])
+         && e.keys().hasAll(['title','slug','date','status','published'])
+         && e.title is string && e.title.size() > 0 && e.title.size() <= 150
+         && e.slug == id && id.matches('^[a-z0-9-]{1,80}$')
+@@ -32,6 +32,8 @@ service cloud.firestore {
+         && e.published is bool
+         && (!('fee' in e) || e.fee is number)
+         && (!('team_size' in e) || e.team_size is number)
++        && (!('team_size_min' in e) || e.team_size_min is number)
++        && (!('team_size_max' in e) || e.team_size_max is number)
+         && (!('images' in e) || (e.images is list && e.images.size() <= 10));
+     }
+     match /events/{id} {
+diff --git a/lib/format.js b/lib/format.js
+index ce47251..2ab950e 100644
+--- a/lib/format.js
++++ b/lib/format.js
+@@ -18,13 +18,22 @@ export function formatShortDate(iso) {
+   }).format(new Date(iso));
+ }
+ 
+-export function formatFee(fee, teamSize) {
++// Events store team_size_min / team_size_max. Older docs only have a single team_size.
++export function teamRange(event) {
++  const min = Number(event?.team_size_min ?? event?.team_size ?? 1) || 1;
++  const max = Number(event?.team_size_max ?? event?.team_size ?? min) || min;
++  return { min, max: Math.max(min, max) };
++}
++
++export function formatFee(fee, event) {
+   if (!fee) return 'Free';
+-  return teamSize > 1 ? `₹${fee} per team` : `₹${fee}`;
++  return teamRange(event).max > 1 ? `₹${fee} per team` : `₹${fee}`;
+ }
+ 
+-export function formatTeam(size) {
+-  return size > 1 ? `${size} members per team` : 'Individual';
++export function formatTeam(event) {
++  const { min, max } = teamRange(event);
++  if (max <= 1) return 'Individual';
++  return min === max ? `${max} members per team` : `${min}–${max} members per team`;
+ }
+ 
+ export function lines(text) {
+diff --git a/lib/sendShortlistEmail.server.js b/lib/sendShortlistEmail.server.js
+index 8154969..7ae7717 100644
+--- a/lib/sendShortlistEmail.server.js
++++ b/lib/sendShortlistEmail.server.js
+@@ -18,6 +18,14 @@ function getTransporter() {
+   return transporter;
+ }
+ 
++function siteBase() {
++  return (
++    process.env.NEXT_PUBLIC_SITE_URL ||
++    (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "") ||
++    "https://eclub-web.vercel.app"
++  ).replace(/\/$/, "");
++}
++
+ const esc = (s) =>
+   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+ 
+@@ -31,12 +39,7 @@ export async function sendShortlistEmail(application) {
+   const t = getTransporter();
+   if (!t) return { sent: false, reason: "smtp-not-configured" };
+ 
+-  const base = (
+-    process.env.NEXT_PUBLIC_SITE_URL ||
+-    (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "") ||
+-    "https://eclub-web.vercel.app"
+-  ).replace(/\/$/, "");
+-  const statusUrl = `${base}/status`;
++  const statusUrl = `${siteBase()}/status`;
+   const domain = application.domainName || application.domainId;
+   const subject = `You're shortlisted for ${domain} — ${SITE.shortName}`;
+ 
+@@ -67,3 +70,60 @@ export async function sendShortlistEmail(application) {
+   });
+   return { sent: true };
+ }
++
++/**
++ * Emails an applicant that their membership is confirmed (sent when a domain head marks them Selected).
++ * Same contract as sendShortlistEmail: returns { sent, reason? }, throws on SMTP failure.
++ */
++export async function sendMembershipEmail(application) {
++  const t = getTransporter();
++  if (!t) return { sent: false, reason: "smtp-not-configured" };
++
++  const statusUrl = `${siteBase()}/status`;
++  const domain = application.domainName || application.domainId;
++  const subject = `Membership confirmed: welcome to ${domain} — ${SITE.shortName}`;
++
++  const text = [
++    `Hi ${application.name},`,
++    ``,
++    `Congratulations! After the interview, you have been selected for ${domain} at ${SITE.name}, ${SITE.campus}. Your membership is confirmed.`,
++    ``,
++    `Your domain lead will share the next steps. You can also check your status here (use your SRN and the email you applied with):`,
++    statusUrl,
++    ``,
++    `Welcome to the club!`,
++    `— ${SITE.shortName} team`,
++  ].join("\n");
++
++  const html = `<div style="font-family:Arial,sans-serif;max-width:520px;line-height:1.5">
++<p>Hi ${esc(application.name)},</p>
++<p>Congratulations! After the interview, you have been <strong>selected for ${esc(domain)}</strong> at ${esc(SITE.name)}, ${esc(SITE.campus)}. Your membership is confirmed.</p>
++<p>Your domain lead will share the next steps. You can also check your status (use your SRN and the email you applied with):</p>
++<p><a href="${esc(statusUrl)}">${esc(statusUrl)}</a></p>
++<p>Welcome to the club!<br>— ${esc(SITE.shortName)} team</p></div>`;
++
++  await t.sendMail({ from: process.env.MAIL_FROM || process.env.SMTP_USER, to: application.email, subject, text, html });
++  return { sent: true };
++}
++
++/**
++ * Sends one admin-written marketing email (plain text body, blank line = new paragraph).
++ * Returns { sent, reason? }, throws on SMTP failure.
++ */
++export async function sendMarketingEmail({ to, name, subject, body }) {
++  const t = getTransporter();
++  if (!t) return { sent: false, reason: "smtp-not-configured" };
++
++  const greeting = name ? `Hi ${name},` : "Hi,";
++  const text = [greeting, "", body, "", `— ${SITE.shortName} team`, siteBase()].join("\n");
++  const paras = String(body)
++    .split(/\n{2,}/)
++    .map((p) => `<p>${esc(p).replace(/\n/g, "<br>")}</p>`)
++    .join("");
++  const html = `<div style="font-family:Arial,sans-serif;max-width:520px;line-height:1.5">
++<p>${esc(greeting)}</p>${paras}
++<p>— ${esc(SITE.shortName)} team<br><a href="${esc(siteBase())}">${esc(siteBase())}</a></p></div>`;
++
++  await t.sendMail({ from: process.env.MAIL_FROM || process.env.SMTP_USER, to, subject, text, html });
++  return { sent: true };
++}
