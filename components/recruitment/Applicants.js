@@ -2,10 +2,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { optimize } from "../../lib/images";
 
 export default function Applicants({ domainId, auth }) {
   const [apps, setApps] = useState([]);
   const [labels, setLabels] = useState({});
+  const [types, setTypes] = useState({});
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [sel, setSel] = useState(new Set());
@@ -22,6 +24,7 @@ export default function Applicants({ domainId, auth }) {
     ]);
     setApps(a.docs.map((d) => ({ id: d.id, ...d.data() })));
     setLabels(Object.fromEntries(q.docs.map((d) => [d.id, d.data().label])));
+    setTypes(Object.fromEntries(q.docs.map((d) => [d.id, d.data().type])));
     setSel(new Set());
   }, [domainId, status]);
   useEffect(() => { load(); }, [load]);
@@ -39,27 +42,13 @@ export default function Applicants({ domainId, auth }) {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${await auth.token()}` },
       body: JSON.stringify({ ids, status: newStatus }),
     });
-    const j = r.ok ? await r.json().catch(() => ({})) : {};
-    setMsg(
-      !r.ok
-        ? "Failed"
-        : j.emailFailed?.length
-        ? `Updated ${ids.length}. ${j.emailFailed.length} email(s) failed to send; those applicants can still see their status at /status.`
-        : j.skipped
-        ? `Updated ${ids.length - j.skipped}. Skipped ${j.skipped} (not allowed from their current status).`
-        : `Updated ${ids.length}`
-    );
+    setMsg(r.ok ? `Updated ${ids.length}` : "Failed");
     setBusy(false);
     setOpen(null);
     load();
   }
 
   const toggle = (id) => { const n = new Set(sel); n.has(id) ? n.delete(id) : n.add(id); setSel(n); };
-  const chosen = apps.filter((a) => sel.has(a.id));
-  const isSuper = auth.profile?.role === "superadmin";
-  const canShortlist = chosen.length > 0 && chosen.every((a) => a.status === "applied" || a.status === "rejected");
-  const canReject = chosen.length > 0 && chosen.every((a) => a.status === "applied");
-  const canSelect = chosen.length > 0 && chosen.every((a) => a.status === "shortlisted");
   const allOn = shown.length > 0 && shown.every((a) => sel.has(a.id));
 
   return (
@@ -70,13 +59,11 @@ export default function Applicants({ domainId, auth }) {
           <option value="all">All statuses</option>
           <option value="applied">Applied</option>
           <option value="shortlisted">Shortlisted</option>
-          <option value="selected">Selected</option>
           <option value="rejected">Rejected</option>
         </select>
       </div>
-      <button className="rc-btn" disabled={busy || !canShortlist} title="Only for applied or rejected applicants" onClick={() => act([...sel], "shortlisted")}>Shortlist selected ({sel.size})</button>
-      <button className="rc-btn" disabled={busy || !canSelect} title="Only for shortlisted applicants" onClick={() => act([...sel], "selected")}>Mark selected as Selected</button>
-      <button className="rc-btn ghost" disabled={busy || !canReject} title="Only for applicants who aren't shortlisted yet" onClick={() => act([...sel], "rejected")}>Reject selected</button>
+      <button className="rc-btn" disabled={busy || !sel.size} onClick={() => act([...sel], "shortlisted")}>Shortlist selected ({sel.size})</button>
+      <button className="rc-btn ghost" disabled={busy || !sel.size} onClick={() => act([...sel], "rejected")}>Reject selected</button>
       {msg && <span className="rc-muted">{msg}</span>}
 
       <table>
@@ -106,21 +93,29 @@ export default function Applicants({ domainId, auth }) {
           {Object.entries(open.answers || {}).map(([k, v]) => (
             <div key={k}>
               <label>{labels[k] || `(deleted question ${k})`}</label>
-              <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{v}</p>
+              {types[k] === "image" ? (
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 6 }}>
+                  {String(v).split("\n").filter(Boolean).map((u) =>
+                    /^https:\/\/res\.cloudinary\.com\//.test(u) ? (
+                      <a key={u} href={u} target="_blank" rel="noopener noreferrer">
+                        <img src={optimize(u, 500)} alt="" style={{ width: 170, height: 128, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }} />
+                      </a>
+                    ) : (
+                      <span key={u} className="rc-muted">{u}</span>
+                    )
+                  )}
+                </div>
+              ) : types[k] === "checkbox" ? (
+                <ul style={{ margin: "4px 0 0", paddingLeft: 20 }}>
+                  {String(v).split("\n").filter(Boolean).map((o) => <li key={o}>{o}</li>)}
+                </ul>
+              ) : (
+                <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{v}</p>
+              )}
             </div>
           ))}
-          {(open.status === "applied" || open.status === "rejected") && (
-            <button className="rc-btn" disabled={busy} onClick={() => act([open.id], "shortlisted")}>Shortlist</button>
-          )}
-          {open.status === "shortlisted" && (
-            <button className="rc-btn" disabled={busy} onClick={() => act([open.id], "selected")}>Selected</button>
-          )}
-          {open.status === "applied" && (
-            <button className="rc-btn ghost" disabled={busy} onClick={() => act([open.id], "rejected")}>Reject</button>
-          )}
-          {open.status === "selected" && isSuper && (
-            <button className="rc-btn ghost" disabled={busy} onClick={() => act([open.id], "shortlisted")}>Undo Selected</button>
-          )}
+          <button className="rc-btn" disabled={busy} onClick={() => act([open.id], "shortlisted")}>Shortlist</button>
+          <button className="rc-btn ghost" disabled={busy} onClick={() => act([open.id], "rejected")}>Reject</button>
           <button className="rc-btn ghost" onClick={() => setOpen(null)}>Close</button>
         </div>
       )}

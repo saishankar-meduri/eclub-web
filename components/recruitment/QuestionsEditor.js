@@ -20,9 +20,10 @@ export default function QuestionsEditor({ domainId }) {
 
   async function save() {
     setErr("");
-    const options = f.type === "mcq" ? f.options.split("\n").map((o) => o.trim()).filter(Boolean) : [];
-    if (!f.label.trim()) return setErr("Label required");
-    if (f.type === "mcq" && options.length < 2) return setErr("MCQ needs at least 2 options (one per line)");
+    const options = (f.type === "mcq" || f.type === "checkbox") ? f.options.split("\n").map((o) => o.trim()).filter(Boolean) : [];
+    if (!f.label.trim()) return setErr("Question text is required");
+    if (f.label.length > 1500) return setErr("Question is too long (max 1500 characters)");
+    if ((f.type === "mcq" || f.type === "checkbox") && options.length < 2) return setErr("Multiple-choice and checkbox questions need at least 2 options (one per line)");
     const data = { label: f.label.trim(), type: f.type, options, required: f.required };
     try {
       if (editId) await updateDoc(doc(db, col, editId), data);
@@ -56,16 +57,19 @@ export default function QuestionsEditor({ domainId }) {
     <div>
       <div className="rc-card">
         <h3>{editId ? "Edit question" : "Add question"}</h3>
-        <label>Label</label>
-        <input value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} />
+        <label>Question</label>
+        <textarea rows={3} maxLength={1500} value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} />
+        <p className="rc-muted">{f.label.length}/1500 characters</p>
         <label>Type</label>
         <select value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })}>
           <option value="short">Short answer</option>
           <option value="long">Long answer</option>
           <option value="mcq">Multiple choice</option>
           <option value="link">Link</option>
+          <option value="checkbox">Checkboxes (pick several)</option>
+          <option value="image">Image upload</option>
         </select>
-        {f.type === "mcq" && (
+        {(f.type === "mcq" || f.type === "checkbox") && (
           <>
             <label>Options (one per line)</label>
             <textarea rows={4} value={f.options} onChange={(e) => setF({ ...f, options: e.target.value })} />
