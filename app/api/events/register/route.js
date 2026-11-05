@@ -67,7 +67,7 @@ export async function POST(req) {
   const given = b.answers && typeof b.answers === "object" ? b.answers : {};
   for (const d of qSnap.docs) {
     const q = d.data();
-    const v = str(given[d.id], 2000);
+    const v = str(given[d.id], 5000);
     if (!v) {
       if (q.required) return fail(`Please answer: ${q.label}`);
       continue;
