@@ -12,12 +12,24 @@ async function auth(req) {
 const col = () => adminDb().collection("contacts");
 const bad = (m) => Response.json({ error: m }, { status: 400 });
 
+function httpsUrl(u, host) {
+  if (u.length > 300 || !/^https:\/\/\S+$/i.test(u)) return false;
+  try {
+    const h = new URL(u).hostname.toLowerCase();
+    return !host || h === host || h.endsWith("." + host);
+  } catch {
+    return false;
+  }
+}
+
 function clean(b) {
   const name = String(b.name || "").trim();
   const designation = String(b.designation || "").trim();
   const group = String(b.group || b.category || "Previous Core Team — Batch 2026").trim();
-  const phone = String(b.phone || "").trim();
   const email = String(b.email || "").trim();
+  const photo_url = String(b.photo_url || "").trim();
+  const linkedin = String(b.linkedin || "").trim();
+  const github = String(b.github || "").trim();
   const order = Number.isFinite(Number(b.order)) ? Number(b.order) : 1;
   const published = b.published !== false;
 
@@ -30,20 +42,25 @@ function clean(b) {
   if (!group || group.length > 120) {
     return { error: "Group/Category is required (max 120 characters)" };
   }
-  if (phone.length > 30) {
-    return { error: "Phone number is too long (max 30 characters)" };
-  }
   if (email.length > 254) {
     return { error: "Email address is too long (max 254 characters)" };
   }
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return { error: "Enter a valid email address" };
+  }
+  if (photo_url && !httpsUrl(photo_url)) return { error: "Photo must be an https image link" };
+  if (linkedin && !httpsUrl(linkedin, "linkedin.com")) return { error: "LinkedIn link must be an https://…linkedin.com URL" };
+  if (github && !httpsUrl(github, "github.com")) return { error: "GitHub link must be an https://…github.com URL" };
 
   return {
     name,
     designation,
     group,
     category: group,
-    phone,
     email,
+    linkedin,
+    github,
+    photo_url,
     order,
     published,
   };
@@ -80,6 +97,22 @@ export async function POST(req) {
     await auth(req);
     const body = await req.json().catch(() => ({}));
 
+    // One-off privacy cleanup: delete any stored phone numbers (the field is no longer used)
+    if (body.action === "purge_phones") {
+      const snap = await col().get();
+      let purged = 0;
+      let batch = adminDb().batch();
+      let n = 0;
+      for (const d of snap.docs) {
+        if (d.data().phone === undefined) continue;
+        batch.update(d.ref, { phone: FieldValue.delete() });
+        purged++;
+        if (++n === 400) { await batch.commit(); batch = adminDb().batch(); n = 0; }
+      }
+      if (n) await batch.commit();
+      return Response.json({ ok: true, purged });
+    }
+
     // Idempotent initial seed action triggered by superadmin
     if (body.action === "seed_default") {
       const batch = adminDb().batch();
@@ -88,8 +121,10 @@ export async function POST(req) {
         const ref = col().doc(item.id);
         const existing = await ref.get();
         if (!existing.exists) {
+          const { phone: _phone, ...rest } = item;
+          void _phone;
           batch.set(ref, {
-            ...item,
+            ...rest,
             category: item.group,
             created_at: FieldValue.serverTimestamp(),
             updated_at: FieldValue.serverTimestamp(),
@@ -131,6 +166,7 @@ export async function PUT(req) {
 
     await ref.update({
       ...c,
+      phone: FieldValue.delete(),
       updated_at: FieldValue.serverTimestamp(),
     });
     return Response.json({ ok: true });

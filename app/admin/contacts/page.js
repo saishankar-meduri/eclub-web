@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminGate from "../../../components/AdminGate";
+import ContactPhotoInput from "../../../components/contacts/ContactPhotoInput";
 
 export default function ContactsAdminPage() {
   return (
@@ -21,8 +22,10 @@ const BLANK_FORM = {
   designation: "",
   group: "Previous Core Team — Batch 2026",
   customGroup: "",
-  phone: "",
   email: "",
+  linkedin: "",
+  github: "",
+  photo_url: "",
   order: 1,
   published: true,
 };
@@ -118,8 +121,10 @@ function ContactsManager({ auth }) {
       designation: c.designation || "",
       group: isCustom ? "__custom__" : c.group,
       customGroup: isCustom ? c.group : "",
-      phone: c.phone || "",
       email: c.email || "",
+      linkedin: c.linkedin || "",
+      github: c.github || "",
+      photo_url: c.photo_url || "",
       order: typeof c.order === "number" ? c.order : 1,
       published: c.published !== false,
     });
@@ -146,8 +151,10 @@ function ContactsManager({ auth }) {
         name,
         designation,
         group: resolvedGroup,
-        phone: form.phone.trim(),
         email: form.email.trim(),
+        linkedin: form.linkedin.trim(),
+        github: form.github.trim(),
+        photo_url: form.photo_url,
         order: Number(form.order) || 1,
         published: form.published,
       };
@@ -209,6 +216,21 @@ function ContactsManager({ auth }) {
   }
 
   // Seed default contacts (idempotent)
+  async function handlePurgePhones() {
+    if (!confirm("Delete all stored phone numbers from the contacts database? This cannot be undone.")) return;
+    setBusy(true);
+    setErr("");
+    try {
+      const res = await call("POST", { action: "purge_phones" });
+      flashSuccess(`Removed phone numbers from ${res.purged} contact(s)`);
+      await load();
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleSeedDefault() {
     if (!confirm("Seed default contacts (Batch 2026 Core Team and Prof. Lakshmeesa)? Existing entries will not be duplicated.")) {
       return;
@@ -320,6 +342,17 @@ function ContactsManager({ auth }) {
             className="rc-btn ghost"
             style={{ margin: 0 }}
             disabled={busy}
+            onClick={handlePurgePhones}
+            title="One-off cleanup: removes any phone numbers still stored from the old version"
+          >
+            Remove stored phone numbers
+          </button>
+
+          <button
+            type="button"
+            className="rc-btn ghost"
+            style={{ margin: 0 }}
+            disabled={busy}
             onClick={handleSeedDefault}
             title="Idempotently populates the Batch 2026 Core Team and Prof. Lakshmeesa if missing"
           >
@@ -371,7 +404,7 @@ function ContactsManager({ auth }) {
                   <th>Designation</th>
                   <th>Group</th>
                   <th>Email</th>
-                  <th>Phone</th>
+                  <th>Links</th>
                   <th>Status</th>
                   <th style={{ textAlign: "right" }}>Actions</th>
                 </tr>
@@ -440,13 +473,9 @@ function ContactsManager({ auth }) {
                         <span style={{ color: "var(--muted)", fontStyle: "italic", fontSize: "0.85rem" }}>None</span>
                       )}
                     </td>
-                    <td>
-                      {c.phone ? (
-                        <a href={`tel:${c.phone}`} style={{ color: "inherit", textDecoration: "underline", fontSize: "0.85rem" }}>
-                          {c.phone}
-                        </a>
-                      ) : (
-                        <span style={{ color: "var(--muted)", fontStyle: "italic", fontSize: "0.85rem" }}>None</span>
+                    <td style={{ fontSize: "0.85rem" }}>
+                      {[c.github && "GitHub", c.linkedin && "LinkedIn", c.photo_url && "Photo"].filter(Boolean).join(" · ") || (
+                        <span style={{ color: "var(--muted)", fontStyle: "italic" }}>None</span>
                       )}
                     </td>
                     <td>
@@ -586,6 +615,14 @@ function ContactsManager({ auth }) {
                 )}
               </div>
 
+              <div style={{ marginBottom: 12 }}>
+                <ContactPhotoInput
+                  value={form.photo_url}
+                  onChange={(url) => setForm({ ...form, photo_url: url })}
+                  getToken={auth.token}
+                />
+              </div>
+
               <div className="rc-row" style={{ marginBottom: 12 }}>
                 <div>
                   <label htmlFor="c-email">Email Address (Optional)</label>
@@ -598,13 +635,26 @@ function ContactsManager({ auth }) {
                   />
                 </div>
                 <div>
-                  <label htmlFor="c-phone">Mobile Number (Optional)</label>
+                  <label htmlFor="c-linkedin">LinkedIn (Optional)</label>
                   <input
-                    id="c-phone"
-                    type="tel"
-                    placeholder="e.g. 987654321"
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    id="c-linkedin"
+                    type="url"
+                    placeholder="https://www.linkedin.com/in/…"
+                    value={form.linkedin}
+                    onChange={(e) => setForm({ ...form, linkedin: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="rc-row" style={{ marginBottom: 12 }}>
+                <div>
+                  <label htmlFor="c-github">GitHub (Optional)</label>
+                  <input
+                    id="c-github"
+                    type="url"
+                    placeholder="https://github.com/username"
+                    value={form.github}
+                    onChange={(e) => setForm({ ...form, github: e.target.value })}
                   />
                 </div>
               </div>
