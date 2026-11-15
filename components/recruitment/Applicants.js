@@ -59,10 +59,12 @@ export default function Applicants({ domainId, auth }) {
           <option value="all">All statuses</option>
           <option value="applied">Applied</option>
           <option value="shortlisted">Shortlisted</option>
+          <option value="selected">Selected</option>
           <option value="rejected">Rejected</option>
         </select>
       </div>
       <button className="rc-btn" disabled={busy || !sel.size} onClick={() => act([...sel], "shortlisted")}>Shortlist selected ({sel.size})</button>
+      <button className="rc-btn" disabled={busy || !sel.size} onClick={() => act([...sel], "selected")}>Select shortlisted ({sel.size})</button>
       <button className="rc-btn ghost" disabled={busy || !sel.size} onClick={() => act([...sel], "rejected")}>Reject selected</button>
       {msg && <span className="rc-muted">{msg}</span>}
 
@@ -114,6 +116,9 @@ export default function Applicants({ domainId, auth }) {
               )}
             </div>
           ))}
+          {open.status === "shortlisted" && (
+            <button className="rc-btn" disabled={busy} onClick={() => act([open.id], "selected")}>Select</button>
+          )}
           <button className="rc-btn" disabled={busy} onClick={() => act([open.id], "shortlisted")}>Shortlist</button>
           <button className="rc-btn ghost" disabled={busy} onClick={() => act([open.id], "rejected")}>Reject</button>
           <button className="rc-btn ghost" onClick={() => setOpen(null)}>Close</button>
