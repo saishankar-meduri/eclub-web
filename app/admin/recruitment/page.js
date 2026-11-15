@@ -23,11 +23,14 @@ function Panel({ auth }) {
   const [mailDomains, setMailDomains] = useState([]);
 
   useEffect(() => {
-    if (!isMarketingHead) return;
-    getDocs(query(collection(db, "domains"), where("open", "==", true)))
+    if (!isSuper && !isMarketingHead) return;
+    const domainsQuery = isSuper
+      ? collection(db, "domains")
+      : query(collection(db, "domains"), where("open", "==", true));
+    getDocs(domainsQuery)
       .then((s) => setMailDomains(s.docs.map((d) => ({ id: d.id, ...d.data() }))))
       .catch(() => {});
-  }, [isMarketingHead]);
+  }, [isSuper, isMarketingHead]);
 
   useEffect(() => {
     if (!isSuper) return;
@@ -47,7 +50,7 @@ function Panel({ auth }) {
         {(isSuper || auth.profile.domainId === "events") && <a className="rc-btn ghost" href="/admin/events">Manage events</a>}
         <button className="rc-btn ghost" onClick={auth.signOut}>Sign out</button>
       </div>
-      {isMarketingHead && <MarketingEmail auth={auth} domains={mailDomains} />}
+      {(isSuper || isMarketingHead) && <MarketingEmail auth={auth} domains={mailDomains} />}
       {isSuper && (
         <select value={domainId} onChange={(e) => setDomainId(e.target.value)}>
           {domains.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
